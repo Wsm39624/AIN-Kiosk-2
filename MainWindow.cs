@@ -1,59 +1,63 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using AIN_Kiosk.Services;
+using AIN_Kiosk.Adapters; // 🎯 استدعاء طبقة المحولات الجديدة
 
-
-// استيراد مساحات الأسماء المتكاملة بنجاح من مكتبة خالد المشتركة
-using AIN.Visitors.Mrz.Abstractions;
-using AIN.Visitors.Mrz.Models;
-using AIN.Visitors.Mrz.Scanners;
 namespace AIN_Kiosk
 {
     public partial class MainWindow : Window
     {
         private bool isArabic = true;
-        private DispatcherTimer? _idleTimer;
-        private string currentFlow = "WalkIn";
-        private bool isInErrorState = false;
 
-        private const string ZebraPrinterName = "ZDesigner GK420t";
-        private readonly IDocumentScanner _scanner;
-
-        private string selectedPurpose = "اجتماع عمل";
-        private string selectedHostName = "";
-        private string selectedMobile = "";
+        // 🎯 حقن الخدمات والمحولات المعمارية بالكامل - صفر % اعتمادية خارجية على العتاد المادي هنا!
+        private readonly KioskWorkflowService _workflowService;
+        private readonly BadgePrintService _printService;
+        private readonly PrivacyReceiptService _receiptService;
+        private readonly LocalizationService _localizationService;
+        private readonly ScannerAdapter _scannerAdapter;
 
         public MainWindow()
         {
             InitializeComponent();
-            _scanner = new MockDocumentScanner(); // الربط مع مكتبة الـ Mock لـ خالد بنجاح
+
+            // تهيئة حزمة البناء المعماري النظيف
+            _workflowService = new KioskWorkflowService();
+            _printService = new BadgePrintService();
+            _receiptService = new PrivacyReceiptService();
+            _localizationService = new LocalizationService();
+            _scannerAdapter = new ScannerAdapter();
+
+            _workflowService.OnIdleTimeout += () =>
+            {
+                ResetToHomeView(forceResetToArabic: true);
+            };
+
             ApplyLanguage();
             InitializeIdleTimer();
         }
 
         private async void BtnWalkIn_Click(object sender, RoutedEventArgs e)
         {
-            currentFlow = "WalkIn"; // تفعيل مسار الـ Walk-In الفوري لقسم 4.2
+            _workflowService.CurrentFlow = "WalkIn";
             await StartKioskWorkflowAsync();
         }
 
         private async void BtnPreRegistered_Click(object sender, RoutedEventArgs e)
         {
-            currentFlow = "PreRegistered"; // المسار القياسي لقسم 4.1
+            _workflowService.CurrentFlow = "PreRegistered";
             await StartKioskWorkflowAsync();
         }
 
         private void BtnRetroactive_Click(object sender, RoutedEventArgs e)
         {
-            currentFlow = "Retroactive"; // مسار الحفظ الرجعي لقسم 4.3[cite: 2]
+            _workflowService.CurrentFlow = "Retroactive";
 
             TxtRetroVisitorName.Text = "";
             TxtRetroDocNumber.Text = "";
@@ -65,10 +69,10 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // ================= [ نظام المعالجة والفحص الرقمي المتكامل ] =================
+        // ================= [ نظام المعالجة والفحص عبر محول القارئ المعزول ] =================
         private async Task StartKioskWorkflowAsync()
         {
-            isInErrorState = false;
+            _workflowService.IsInErrorState = false;
             PrintStatusLabel.Text = "";
             QrCodeContainer.Visibility = Visibility.Collapsed;
 
@@ -76,26 +80,18 @@ namespace AIN_Kiosk
             ViewScan.Visibility = Visibility.Visible;
             ApplyLanguage();
 
-            bool isScanValid = false;
-            try
-            {
-                using (ScanResult scanResult = await _scanner.ScanAsync(CancellationToken.None))
-                {
-                    isScanValid = scanResult.IsSuccess;
-                }
-            }
-            catch { isScanValid = false; }
+            // 🚀 استدعاء المحول المعزول كلياً لتنفيذ عملية الفحص الآمن للهوية
+            bool isScanValid = await _scannerAdapter.ExecuteScanAsync();
 
             if (isScanValid)
             {
                 ViewScan.Visibility = Visibility.Collapsed;
 
-                if (currentFlow == "WalkIn")
+                if (_workflowService.CurrentFlow == "WalkIn")
                 {
-                    // 🚀 [هندسة الـ Walk-In لقسم 4.2]: تخطي شاشة التفاصيل، تجميد المضيف كمعلق، والتوجه للخصوصية فورا بـ 25 ثانية فقط![cite: 2]
-                    selectedHostName = "Pending / Back-fill Queue";
-                    selectedPurpose = "Walk-In Unexpected Guest";
-                    selectedMobile = "Not Provided";
+                    _workflowService.SelectedHostName = "Pending / Back-fill Queue";
+                    _workflowService.SelectedPurpose = "Walk-In Unexpected Guest";
+                    _workflowService.SelectedMobile = "Not Provided";
 
                     ViewPrivacy.Visibility = Visibility.Visible;
                     ApplyLanguage();
@@ -114,7 +110,7 @@ namespace AIN_Kiosk
             }
         }
 
-        // ================= [ دالة حفظ وتأكيد السجل بأثر رجعي - الخطوة 4.3 ] =================
+        // ================= [ دالة حفظ وتأكيد السجل بأثر رجعي ] =================
         private void BtnSubmitRetroactive_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TxtRetroVisitorName.Text) || string.IsNullOrWhiteSpace(TxtRetroDocNumber.Text) || string.IsNullOrWhiteSpace(TxtRetroHostName.Text))
@@ -138,102 +134,26 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        // ================= [ ضخ الـ ZPL المصحح والمقسم مادية بين وسام وخالد ] =================
+        // ================= [ استدعاء محركات الطباعة والخصوصية المعزولة ] =================
         private async void BtnAcceptPrint_Click(object sender, RoutedEventArgs e)
         {
-            if (isInErrorState)
+            if (_workflowService.IsInErrorState)
             {
                 ResetToHomeView(forceResetToArabic: true);
                 return;
             }
 
             BtnAcceptPrint.IsEnabled = false;
-            _idleTimer?.Stop();
+            _workflowService.StopIdleTimer();
 
             PrintStatusLabel.Foreground = Brushes.DarkBlue;
             PrintStatusLabel.Text = isArabic ? "⏳ جاري طباعة التصميم الديناميكي ثنائي الوجه..." : "⏳ Executing regulator-grade layout engine...";
 
-            // 1. الفصل المادي للأسماء: السفلي لوسام والعلوي للمشرف خالدAlamri
-            string visitor1Name = "Wesam Mohammed";
-            string visitor2Name = "Eng. Khaled Alamri";
-            string visitorCompany = "EBTCO / BDO Al-Amri";
-            string visitorToken = $"AIN-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}";
-
-            string visitDateStr = DateTime.Now.ToString("yyyy-MM-dd");
-            string validUntilStr = DateTime.Now.ToString("yyyy-MM-dd");
-
-            // 2. 💡 حل مشكلة علامات الاستفهام (????): خريطة تحويل النصوص العربية إلى إنجليزية الصافية للطابعة
-            string purposeInEnglish = "General Visit";
-            if (selectedPurpose.Contains("اجتماع") || selectedPurpose.ToLower().Contains("meeting")) purposeInEnglish = "Business Meeting";
-            else if (selectedPurpose.Contains("مقابلة") || selectedPurpose.ToLower().Contains("interview")) purposeInEnglish = "Job Interview";
-            else if (selectedPurpose.Contains("صيانة") || selectedPurpose.ToLower().Contains("maintenance")) purposeInEnglish = "Technical Maintenance";
-            else if (selectedPurpose.Contains("توصيل") || selectedPurpose.ToLower().Contains("delivery")) purposeInEnglish = "Delivery / Courier";
-            else if (selectedPurpose.Contains("مورد") || selectedPurpose.ToLower().Contains("vendor")) purposeInEnglish = "Vendor / Supplier";
-
-            string zplData = $@"
-^XA
-~SD24
-^PW800
-^LL1200
-^FO16,16^GB768,568,3,B^FS
-^FO45,55^A0N,55,55^FDVISITOR^FS
-^FO45,125^GB450,55,55,B^FS
-^FO55,138^A0N,30,30^FR^FD{visitor2Name}^FS
-^FO45,190^GB450,50,50,B^FS
-^FO55,202^A0N,26,26^FR^FD{visitorCompany}^FS
-^FO45,260^A0N,22,22^FDVISIT DATE:^FS
-^FO200,250^GB270,38,2,B^FS
-^FO215,258^A0N,20,20^FD{visitDateStr}^FS
-^FO45,315^A0N,22,22^FDVALID UNTIL:^FS
-^FO200,305^GB270,38,2,B^FS
-^FO215,313^A0N,20,20^FD{validUntilStr}^FS
-^FO45,370^A0N,22,22^FDHOST:^FS
-^FO200,360^GB270,38,2,B^FS
-^FO215,368^A0N,20,20^FD{selectedHostName}^FS
-^FO45,425^A0N,22,22^FDPURPOSE:^FS
-^FO200,415^GB270,38,2,B^FS
-^FO215,423^A0N,20,20^FD{purposeInEnglish}^FS
-^FO45,480^A0N,22,22^FDMOBILE:^FS
-^FO200,470^GB270,38,2,B^FS
-^FO215,478^A0N,20,20^FD{selectedMobile}^FS
-^FO540,110^BQN,2,6^FDQA,{visitorToken}^FS
-^FO530,395^A0N,24,24^FDID:^FS
-^FO575,385^GB170,42,2,B^FS
-^FO590,395^A0N,20,20^FD{visitorToken}^FS
-
-^FO16,616^GB768,568,3,B^FS
-^FO45,655^A0N,55,55^FDVISITOR^FS
-^FO45,725^GB450,55,55,B^FS
-^FO55,738^A0N,30,30^FR^FD{visitor1Name}^FS
-^FO45,790^GB450,50,50,B^FS
-^FO55,802^A0N,26,26^FR^FD{visitorCompany}^FS
-^FO45,860^A0N,22,22^FDVISIT DATE:^FS
-^FO200,850^GB270,38,2,B^FS
-^FO215,858^A0N,20,20^FD{visitDateStr}^FS
-^FO45,915^A0N,22,22^FDVALID UNTIL:^FS
-^FO200,905^GB270,38,2,B^FS
-^FO215,913^A0N,20,20^FD{validUntilStr}^FS
-^FO45,970^A0N,22,22^FDHOST:^FS
-^FO200,960^GB270,38,2,B^FS
-^FO215,968^A0N,20,20^FD{selectedHostName}^FS
-^FO45,1025^A0N,22,22^FDPURPOSE:^FS
-^FO200,1015^GB270,38,2,B^FS
-^FO215,1023^A0N,20,20^FD{purposeInEnglish}^FS
-^FO45,1080^A0N,22,22^FDMOBILE:^FS
-^FO200,1070^GB270,38,2,B^FS
-^FO215,1078^A0N,20,20^FD{selectedMobile}^FS
-^FO540,710^BQN,2,6^FDQA,{visitorToken}^FS
-^FO530,995^A0N,24,24^FDID:^FS
-^FO575,985^GB170,42,2,B^FS
-^FO590,995^A0N,20,20^FD{visitorToken}^FS
-^XZ";
-
-            bool isPrintSuccess = false;
-            await Task.Run(() =>
-            {
-                try { isPrintSuccess = RawPrinterHelper.SendStringToPrinter(ZebraPrinterName, zplData); }
-                catch { isPrintSuccess = false; }
-            });
+            bool isPrintSuccess = await _printService.PrintVisitorBadgeAsync(
+                _workflowService.SelectedHostName,
+                _workflowService.SelectedPurpose,
+                _workflowService.SelectedMobile
+            );
 
             if (isPrintSuccess)
             {
@@ -246,45 +166,30 @@ namespace AIN_Kiosk
                 BtnDoneReceipt.Visibility = Visibility.Visible;
                 BorderReceptionistAlert.Visibility = Visibility.Visible;
 
-                DateTime purgeDate = DateTime.Now.AddDays(90);
-                string secureHash = Guid.NewGuid().ToString("N").ToUpper().Substring(0, 16);
+                ReceiptDetails receipt = _receiptService.GenerateReceipt(
+                    _workflowService.CurrentFlow,
+                    _workflowService.SelectedHostName,
+                    _workflowService.SelectedPurpose,
+                    isArabic
+                );
 
-                if (isArabic)
-                {
-                    TxtReceptionistAlert.Text = currentFlow == "WalkIn"
-                        ? "🔔 تنبيه الاستقبال السريع: تم رصد دخول زائر بدون موعد بنجاح، بانتظار استكمال بيانات المضيف بالخلفية."
-                        : $"تنبيه الاستقبال: وصل الزائر ({visitor1Name}) وهو في انتظار المضيف ({selectedHostName}) حالياً.";
+                TxtReceptionistAlert.Text = receipt.ReceptionistAlert;
+                TxtReceiptDataCaptured.Text = receipt.DataCaptured;
+                TxtReceiptPurgeDate.Text = receipt.PurgeDateText;
+                TxtReceiptHash.Text = receipt.IntegrityHash;
 
-                    TxtReceiptDataCaptured.Text = $"• البيانات الشخصية: {visitor1Name} | الجهة: {visitorCompany}\n• الشخص المضيف: {selectedHostName}\n• غرض الزيارة المعتمد: {selectedPurpose}";
-                    TxtReceiptPurgeDate.Text = $"⚠️ سيتم إتلاف سجل بياناتك الشخصية آلياً بتاريخ: {purgeDate:yyyy-MM-dd} (حسب سياسة الاحتفاظ بـ 90 يوماً).";
-                    TxtReceiptHash.Text = $"SHA-256 Integrity Hash: AIN-SEC-{secureHash}";
-                }
-                else
-                {
-                    TxtReceptionistAlert.Text = currentFlow == "WalkIn"
-                        ? "🔔 Quick Reception Alert: Unscheduled visitor check-in successful. Pending back-fill completion."
-                        : $"Reception Alert: Visitor ({visitor1Name}) has arrived and is waiting for Host ({selectedHostName}).";
-
-                    TxtReceiptDataCaptured.Text = $"• Personal Data: {visitor1Name} | Org: {visitorCompany}\n• Host Person: {selectedHostName}\n• Approved Purpose: {selectedPurpose}";
-                    TxtReceiptPurgeDate.Text = $"⚠️ Your personal data record will be automatically purged on: {purgeDate:yyyy-MM-dd} (90 days retention limit).";
-                    TxtReceiptHash.Text = $"SHA-256 Integrity Hash: AIN-SEC-{secureHash}";
-                }
-
-                _idleTimer?.Stop();
-                _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
-                _idleTimer.Tick += (s, ev) => { ResetToHomeView(forceResetToArabic: true); };
-                _idleTimer.Start();
+                _workflowService.InitializeIdleTimer(TimeSpan.FromSeconds(60));
             }
             else
             {
-                isInErrorState = true;
+                _workflowService.IsInErrorState = true;
                 BtnAcceptPrint.IsEnabled = true;
                 BtnAcceptPrint.Background = Brushes.DarkRed;
                 BtnAcceptPrint.Content = isArabic ? "العودة للقائمة الرئيسية" : "Return to Home";
                 QrCodeContainer.Visibility = Visibility.Visible;
                 PrintStatusLabel.Foreground = Brushes.Red;
                 PrintStatusLabel.Text = isArabic ? "⚠️ عذراً، طابعة البطاقات غير متوفرة حالياً!" : "⚠️ Printer is offline!";
-                _idleTimer?.Start();
+                _workflowService.ResetIdleTimer();
             }
         }
 
@@ -303,7 +208,6 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        // ================= [ ميكانيكية إعادة الضبط الشاملة للمصنع ] =================
         private void ResetToHomeView(bool forceResetToArabic = false)
         {
             ViewPrivacy.Visibility = Visibility.Collapsed;
@@ -313,7 +217,6 @@ namespace AIN_Kiosk
             ViewHome.Visibility = Visibility.Visible;
 
             BtnAcceptPrint.IsEnabled = true;
-            isInErrorState = false;
             PrintStatusLabel.Text = "";
             QrCodeContainer.Visibility = Visibility.Collapsed;
             BorderReceptionistAlert.Visibility = Visibility.Collapsed;
@@ -324,24 +227,23 @@ namespace AIN_Kiosk
 
             TxtHostName.Text = "";
             TxtMobileNumber.Text = "";
-            selectedPurpose = isArabic ? "اجتماع عمل" : "Business Meeting";
 
             if (forceResetToArabic) isArabic = true;
+
+            _workflowService.ResetSession();
+            _workflowService.SelectedPurpose = isArabic ? "اجتماع عمل" : "Business Meeting";
+
             ApplyLanguage();
-            _idleTimer?.Stop();
-            _idleTimer?.Start();
         }
 
         private void InitializeIdleTimer()
         {
-            _idleTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(45) };
-            _idleTimer.Tick += (s, e) => { _idleTimer?.Stop(); ResetToHomeView(forceResetToArabic: true); };
-            _idleTimer.Start();
+            _workflowService.InitializeIdleTimer(TimeSpan.FromSeconds(45));
         }
 
         private void Window_PreviewInteraction(object sender, System.Windows.Input.InputEventArgs e)
         {
-            if (_idleTimer != null) { _idleTimer.Stop(); _idleTimer.Start(); }
+            _workflowService.ResetIdleTimer();
         }
 
         private void BtnLangToggle_Click(object sender, RoutedEventArgs e)
@@ -350,7 +252,6 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // ================= [ إصلاح حركة وتفاعل أزرار الـ Chips برمجياً ] =================
         private void ChipPurpose_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button clickedButton)
@@ -369,7 +270,7 @@ namespace AIN_Kiosk
 
                 clickedButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0D6EFD"));
                 clickedButton.Foreground = Brushes.White;
-                selectedPurpose = clickedButton.Content?.ToString() ?? "اجتماع عمل";
+                _workflowService.SelectedPurpose = clickedButton.Content?.ToString() ?? "اجتماع عمل";
             }
         }
 
@@ -381,10 +282,10 @@ namespace AIN_Kiosk
                 return;
             }
 
-            selectedHostName = TxtHostName.Text;
-            selectedMobile = string.IsNullOrWhiteSpace(TxtMobileNumber.Text) ? "لم يسجل" : TxtMobileNumber.Text;
+            _workflowService.SelectedHostName = TxtHostName.Text;
+            _workflowService.SelectedMobile = string.IsNullOrWhiteSpace(TxtMobileNumber.Text) ? "لم يسجل" : TxtMobileNumber.Text;
 
-            string rawDataUrl = $"https://ain.ebtco.sa/privacy?session={Guid.NewGuid()}&flow={currentFlow}";
+            string rawDataUrl = $"https://ain.ebtco.sa/privacy?session={Guid.NewGuid()}&flow={_workflowService.CurrentFlow}";
             string qrGeneratorApi = $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={Uri.EscapeDataString(rawDataUrl)}";
             try { KioskQrImage.Source = new BitmapImage(new Uri(qrGeneratorApi)); } catch { }
 
@@ -393,114 +294,61 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // ================= [ 🚀 محرك الترجمة ومحاذاة الواجهات الديناميكي الشامل ] =================
         private void ApplyLanguage()
         {
-            if (isArabic)
+            if (_workflowService == null || _localizationService == null) return;
+
+            KioskWindow.FlowDirection = isArabic ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+            BtnLangToggle.Content = _localizationService.GetText("BtnLangToggle", !isArabic);
+
+            WelcomeTitle.Text = _localizationService.GetText("WelcomeTitle", isArabic);
+            WelcomeSubtitle.Text = _localizationService.GetText("WelcomeSubtitle", isArabic);
+            BtnPreRegistered.Content = _localizationService.GetText("BtnPreRegistered", isArabic);
+            BtnWalkIn.Content = _localizationService.GetText("BtnWalkIn", isArabic);
+            BtnRetroactive.Content = _localizationService.GetText("BtnRetroactive", isArabic);
+            BtnHelp.Content = _localizationService.GetText("BtnHelp", isArabic);
+
+            ScanTitle.Text = _workflowService.CurrentFlow == "WalkIn"
+                ? _localizationService.GetText("ScanTitleWalkIn", isArabic)
+                : _localizationService.GetText("ScanTitlePreRegistered", isArabic);
+            ScanSubtitle.Text = _localizationService.GetText("ScanSubtitle", isArabic);
+
+            DetailsTitle.Text = _localizationService.GetText("DetailsTitle", isArabic);
+            DetailsSubtitle.Text = _localizationService.GetText("DetailsSubtitle", isArabic);
+            LblHostName.Text = _localizationService.GetText("LblHostName", isArabic);
+            LblPurpose.Text = _localizationService.GetText("LblPurpose", isArabic);
+            LblMobile.Text = _localizationService.GetText("LblMobile", isArabic);
+            ChipMeeting.Content = _localizationService.GetText("ChipMeeting", isArabic);
+            ChipInterview.Content = _localizationService.GetText("ChipInterview", isArabic);
+            ChipMaintenance.Content = _localizationService.GetText("ChipMaintenance", isArabic);
+            ChipDelivery.Content = _localizationService.GetText("ChipDelivery", isArabic);
+            ChipVendor.Content = _localizationService.GetText("ChipVendor", isArabic);
+            ChipOther.Content = _localizationService.GetText("ChipOther", isArabic);
+            BtnNextToPrivacy.Content = _localizationService.GetText("BtnNextToPrivacy", isArabic);
+
+            QrLabel.Text = _localizationService.GetText("QrLabel", isArabic);
+            if (!_workflowService.IsInErrorState) BtnAcceptPrint.Content = _localizationService.GetText("BtnAcceptPrint", isArabic);
+            BtnDoneReceipt.Content = _localizationService.GetText("BtnDoneReceipt", isArabic);
+
+            TxtRetroTitle.Text = _localizationService.GetText("TxtRetroTitle", isArabic);
+            TxtRetroWarning.Text = _localizationService.GetText("TxtRetroWarning", isArabic);
+            LblRetroVisName.Text = _localizationService.GetText("LblRetroVisName", isArabic);
+            LblRetroDocNum.Text = _localizationService.GetText("LblRetroDocNum", isArabic);
+            LblRetroHost.Text = _localizationService.GetText("LblRetroHost", isArabic);
+            LblRetroPurpose.Text = _localizationService.GetText("LblRetroPurpose", isArabic);
+            ChkRetroAttestation.Content = _localizationService.GetText("ChkRetroAttestation", isArabic);
+            BtnSubmitRetroactive.Content = _localizationService.GetText("BtnSubmitRetroactive", isArabic);
+            BtnCancelRetroactive.Content = _localizationService.GetText("BtnCancelRetroactive", isArabic);
+
+            if (_workflowService.CurrentFlow == "WalkIn")
             {
-                KioskWindow.FlowDirection = FlowDirection.RightToLeft;
-                BtnLangToggle.Content = "English";
-
-                WelcomeTitle.Text = "مرحباً بك في جهاز الخدمة الذاتية";
-                WelcomeSubtitle.Text = "يرجى اختيار مسار الزيارة المناسب للبدء";
-                BtnPreRegistered.Content = "زائر مسجل";
-                BtnWalkIn.Content = "زائر بدون موعد";
-                BtnRetroactive.Content = "تسجيل بأثر رجعي";
-                BtnHelp.Content = "مساعدة";
-
-                ScanTitle.Text = currentFlow == "WalkIn" ? "جاري معالجة مسار زائر بدون موعد..." : "جاري معالجة مسار زائر مسجل مسبقاً...";
-                ScanSubtitle.Text = "يرجى وضع بطاقة الهوية أو جواز السفر على جهاز الفحص";
-
-                DetailsTitle.Text = "استكمال معلومات الزيارة";
-                DetailsSubtitle.Text = "يرجى تحديد الشخص المضيف وسبب زيارتك اليوم";
-                LblHostName.Text = "اسم الشخص المضيف:";
-                LblPurpose.Text = "سبب الزيارة:";
-                LblMobile.Text = "رقم الجوال - اختياري:";
-                ChipMeeting.Content = "اجتماع عمل";
-                ChipInterview.Content = "مقابلة شخصية";
-                ChipMaintenance.Content = "صيانة فنية";
-                ChipDelivery.Content = "توصيل / شحنة";
-                ChipVendor.Content = "مورد / عميل";
-                ChipOther.Content = "أخرى";
-                BtnNextToPrivacy.Content = "التالي: مراجعة سياسة الخصوصية";
-
-                QrLabel.Text = "امسح الرمز للاحتفاظ بالوثيقة";
-                if (!isInErrorState) BtnAcceptPrint.Content = "أوافق واطبع البطاقة";
-                BtnDoneReceipt.Content = "إنهاء والعودة للرئيسية";
-
-                TxtRetroTitle.Text = "تسجيل زائر بأثر رجعي (Retroactive Entry)";
-                TxtRetroWarning.Text = "⚠️ تنبيه أمني: أنت تقوم بتسجيل حركة زائر سابقة يدوياً. يخضع هذا الإجراء للتدقيق الصارم.";
-                LblRetroVisName.Text = "اسم الزائر بالكامل:";
-                LblRetroDocNum.Text = "رقم الوثيقة / الهوية:";
-                LblRetroHost.Text = "اسم الموظف المضيف:";
-                LblRetroPurpose.Text = "غرض الزيارة الفعلي:";
-                ChkRetroAttestation.Content = "أقر وأصادق بصفتي المضيف بأنني رافقت هذا الزائر مادية وأن البيانات أعلاه دقيقة.";
-                BtnSubmitRetroactive.Content = "تأكيد وحفظ السجل بأثر رجعي";
-                BtnCancelRetroactive.Content = "إلغاء والعودة للرئيسية";
-
-                if (currentFlow == "WalkIn")
-                {
-                    PrivacyTitle.Text = "إقرار سياسة الخصوصية الفوري (One-Click Consent)";
-                    PrivacyBody.Text = "بضغطك على الزر أدناه، يتم منح الموافقة الفورية على معالجة الهوية آلياً وإصدار بطاقة الدخول الممتثلة لنظام PDPL.";
-                }
-                else
-                {
-                    PrivacyTitle.Text = "وثيقة سياسة الخصوصية وحماية البيانات";
-                    PrivacyBody.Text = "يتعهد نظام (عين) لحلول الزوار بحماية بياناتك الشخصية وفقاً للأنظمة واللوائح الصادرة من الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) ومصرف تداول المركزي (ساما). بضغطك على زر (أوافق واطبع البطاقة)، فإنك تمنح النظام صلاحية معالجة هذه البيانات بشكل آمن ومؤقت.";
-                }
+                PrivacyTitle.Text = _localizationService.GetText("PrivacyTitleWalkIn", isArabic);
+                PrivacyBody.Text = _localizationService.GetText("PrivacyBodyWalkIn", isArabic);
             }
             else
             {
-                KioskWindow.FlowDirection = FlowDirection.LeftToRight;
-                BtnLangToggle.Content = "العربية";
-
-                WelcomeTitle.Text = "Welcome to the Self-Service Kiosk";
-                WelcomeSubtitle.Text = "Please select the appropriate visit path to start";
-                BtnPreRegistered.Content = "Pre-Registered";
-                BtnWalkIn.Content = "Walk-In";
-                BtnRetroactive.Content = "Retroactive Entry";
-                BtnHelp.Content = "Help";
-
-                ScanTitle.Text = currentFlow == "WalkIn" ? "Processing Walk-In flow..." : "Processing Pre-Registered flow...";
-                ScanSubtitle.Text = "Please place your ID card or passport on the scanner";
-
-                DetailsTitle.Text = "Complete Visit Information";
-                DetailsSubtitle.Text = "Please specify the host and your purpose of visit";
-                LblHostName.Text = "Host Name:";
-                LblPurpose.Text = "Purpose of Visit:";
-                LblMobile.Text = "Mobile Number - Optional:";
-                ChipMeeting.Content = "Business Meeting";
-                ChipInterview.Content = "Job Interview";
-                ChipMaintenance.Content = "Technical Maintenance";
-                ChipDelivery.Content = "Delivery / Courier";
-                ChipVendor.Content = "Vendor / Supplier";
-                ChipOther.Content = "Other";
-                BtnNextToPrivacy.Content = "Next: Review Privacy Policy";
-
-                QrLabel.Text = "Scan QR to keep the receipt";
-                if (!isInErrorState) BtnAcceptPrint.Content = "Accept & Print Badge";
-                BtnDoneReceipt.Content = "Finish & Return Home";
-
-                TxtRetroTitle.Text = "Retroactive Entry Logging";
-                TxtRetroWarning.Text = "⚠️ Security Notice: You are recording a past visitor entry manually. This action is fully audited.";
-                LblRetroVisName.Text = "Visitor Full Name:";
-                LblRetroDocNum.Text = "Document / ID Number:";
-                LblRetroHost.Text = "Host Employee Name:";
-                LblRetroPurpose.Text = "Actual Visit Purpose:";
-                ChkRetroAttestation.Content = "I confirm I escorted this visitor and the above metadata is accurate.";
-                BtnSubmitRetroactive.Content = "Confirm & Save Retroactive Record";
-                BtnCancelRetroactive.Content = "Cancel & Return Home";
-
-                if (currentFlow == "WalkIn")
-                {
-                    PrivacyTitle.Text = "One-Click Privacy Consent";
-                    PrivacyBody.Text = "By clicking the button below, you grant immediate authorization to process your ID metadata and issue a temporary entry badge compliant with PDPL regulations.";
-                }
-                else
-                {
-                    PrivacyTitle.Text = "Privacy Policy & Data Protection Contract";
-                    PrivacyBody.Text = "The (AIN) Visitor Solutions system is committed to protecting your personal data in accordance with the regulations issued by SDAIA and SAMA. By clicking (Accept & Print Badge), you grant the system permission to process this data securely.";
-                }
+                PrivacyTitle.Text = _localizationService.GetText("PrivacyTitleDefault", isArabic);
+                PrivacyBody.Text = _localizationService.GetText("PrivacyBodyDefault", isArabic);
             }
         }
     }
