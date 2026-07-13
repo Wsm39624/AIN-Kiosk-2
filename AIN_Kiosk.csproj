@@ -14,4 +14,14 @@
 		<PackageReference Include="Syncfusion.Shared.WPF" Version="34.1.29" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<Compile Remove="AIN.Visitors.Mrz\**" />
+		<EmbeddedResource Remove="AIN.Visitors.Mrz\**" />
+		<None Remove="AIN.Visitors.Mrz\**" />
+		<Page Remove="AIN.Visitors.Mrz\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
+	</ItemGroup>
 </Project>
