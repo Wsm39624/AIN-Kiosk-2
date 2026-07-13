@@ -10,10 +10,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-// 🟢 استيراد مساحات الأسماء المكاملة بنجاح من مكتبة خالد المشتركة
-//using AIN.Visitors.Mrz.Abstractions;
-//using AIN.Visitors.Mrz.Models;
 
+// استيراد مساحات الأسماء المتكاملة بنجاح من مكتبة خالد المشتركة
+using AIN.Visitors.Mrz.Abstractions;
+using AIN.Visitors.Mrz.Models;
+using AIN.Visitors.Mrz.Scanners;
 namespace AIN_Kiosk
 {
     public partial class MainWindow : Window
