@@ -9,12 +9,12 @@ namespace AIN_Kiosk.Services
         private const string ZebraPrinterName = "ZDesigner GK420t";
         private readonly PrinterAdapter _printerAdapter = new(); // تهيئة المحول
 
-        public async Task<bool> PrintVisitorBadgeAsync(string hostName, string purpose, string mobile)
+        // 🎯 التوقيع الجديد المحدث ليستقبل 4 متغيرات بالتزامن
+        public async Task<bool> PrintVisitorBadgeAsync(string hostName, string purpose, string mobile, string visitorToken)
         {
             string visitor1Name = "Wesam Mohammed";
             string visitor2Name = "Eng. Khaled Alamri";
             string visitorCompany = "EBTCO / BDO Al-Amri";
-            string visitorToken = $"AIN-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}";
 
             string visitDateStr = DateTime.Now.ToString("yyyy-MM-dd");
             string validUntilStr = DateTime.Now.ToString("yyyy-MM-dd");
@@ -87,8 +87,15 @@ namespace AIN_Kiosk.Services
             bool isPrintSuccess = false;
             await Task.Run(() =>
             {
-                // الاستدعاء المعزول عبر المحول النظيف
-                isPrintSuccess = _printerAdapter.SendStringToPrinter(ZebraPrinterName, zplData);
+                try
+                {
+                    isPrintSuccess = _printerAdapter.SendStringToPrinter(ZebraPrinterName, zplData);
+                }
+                catch (Exception ex)
+                {
+                    isPrintSuccess = false;
+                    System.Diagnostics.Debug.WriteLine($"[Printer Error] Native print thread crashed: {ex.Message}");
+                }
             });
 
             return isPrintSuccess;
