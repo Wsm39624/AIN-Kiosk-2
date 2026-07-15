@@ -15,4 +15,30 @@ namespace AIN_Kiosk
     {
         Task<bool> SyncVisitorAsync(object session, CancellationToken cancellationToken);
     }
+
+    //  الواجهة البرمجية المطلوبة رقابياً لتأمين مسار المزامنة دونpersistence
+    public interface IRegistrationQueue
+    {
+        void EnqueueMockRecord(string flow, string visitorName);
+    }
+
+    public class MockRegistrationQueue : IRegistrationQueue
+    {
+        public void EnqueueMockRecord(string flow, string visitorName)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Mock Queue] Enqueued {flow} for {visitorName} (Simulated - not persisted).");
+        }
+    }
+
+    public interface IKioskConfigurationProvider
+    {
+        string TenantName { get; }
+        string PrivacyContact { get; }
+    }
+
+    //  واجهة استهلاك فترات الاحتفاظ بالبيانات المعتمدة رقابياً
+    public interface IKioskPrivacyNoticeProvider
+    {
+        string GetRetentionStatement(bool isArabic);
+    }
 }

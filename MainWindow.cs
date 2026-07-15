@@ -26,10 +26,11 @@ namespace AIN_Kiosk
         private readonly LocalizationService _localizationService;
         private readonly ScannerAdapter _scannerAdapter;
         private readonly LocalQrCodeService _qrCodeService;
+        private readonly IRegistrationQueue _registrationQueue;
 
         // موفرات الإعدادات والخصوصية لمنع الـ Hardcoding
-        private readonly KioskConfigurationProvider _configProvider;
-        private readonly KioskPrivacyNoticeProvider _privacyNoticeProvider;
+        private readonly IKioskConfigurationProvider _configProvider;
+        private readonly IKioskPrivacyNoticeProvider _privacyNoticeProvider;
 
         public MainWindow()
         {
@@ -44,6 +45,8 @@ namespace AIN_Kiosk
             _qrCodeService = new LocalQrCodeService();
             _configProvider = new KioskConfigurationProvider();
             _privacyNoticeProvider = new KioskPrivacyNoticeProvider();
+            _qrCodeService = new LocalQrCodeService(); 
+            _registrationQueue = new MockRegistrationQueue(); 
 
             _workflowService.OnIdleTimeout += () =>
             {
@@ -142,24 +145,30 @@ namespace AIN_Kiosk
         // ================= [ دالة السجل بأثر رجعي - الأمانة الهندسية ] =================
         private void BtnSubmitRetroactive_Click(object sender, RoutedEventArgs e)
         {
+            // 1. التحقق من تعبئة البيانات الأساسية
             if (string.IsNullOrWhiteSpace(TxtRetroVisitorName.Text) || string.IsNullOrWhiteSpace(TxtRetroDocNumber.Text) || string.IsNullOrWhiteSpace(TxtRetroHostName.Text))
             {
                 MessageBox.Show(isArabic ? "عذراً، يجب تعبئة كافة البيانات الأساسية لحفظ السجل!" : "All fields are required for retroactive logging!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 🔒 تصحيح اسم العنصر البرمجي لمطابقة الـ XAML
+            // 2. التحقق من تفعيل مربع الإقرار لمطابقة الـ XAML
             if (ChkRetroAttestation.IsChecked != true)
             {
                 MessageBox.Show(isArabic ? "يجب تفعيل مربع الإقرار والمصادقة الإلكترونية لاعتماد السجل بأثر رجعي!" : "You must check the attestation box to proceed!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
+            // 🔒 هنا المكان الصحيح: استدعاء الواجهة التشبيهية امتثالاً لطلب المهندس خالد بعد التحقق وقبل النجاح
+            _registrationQueue.EnqueueMockRecord(_workflowService.CurrentFlow, TxtRetroVisitorName.Text);
+
+            // 3. عرض رسالة الحفظ التجريبية الصادقة
             MessageBox.Show(
                 isArabic ? "✓ [محاكاة - لم يتم الحفظ] تم تأكيد السجل بأثر رجعي محلياً بنجاح.\n\n⚠️ تنبيه: الربط الفعلي مع الخلفية معلق (Backend integration pending)."
                          : "✓ [Simulated - not persisted] Retroactive record confirmed locally.\n\n⚠️ Notice: Backend integration pending.",
                 "AIN Kiosk - Prototype Status", MessageBoxButton.OK, MessageBoxImage.Information
             );
+
             ResetToHomeView(forceResetToArabic: true);
         }
 
@@ -208,7 +217,7 @@ namespace AIN_Kiosk
                     isArabic
                 );
 
-                string secureHash = Guid.NewGuid().ToString("N").ToUpper().Substring(0, 16);
+               
 
                 if (isArabic)
                 {
@@ -218,7 +227,7 @@ namespace AIN_Kiosk
 
                     TxtReceiptDataCaptured.Text = $"• [محاكاة - لم يتم الحفظ] البيانات الشخصية: Wesam Mohammed | الجهة: {_configProvider.TenantName}\n• الشخص المضيف: {_workflowService.SelectedHostName}\n• غرض الزيارة: {_workflowService.SelectedPurpose}";
                     TxtReceiptPurgeDate.Text = $"⚠️ [قيمة اختبار غير معتمدة] سيتم إتلاف سجل بياناتك الشخصية آلياً بعد: {_privacyNoticeProvider.GetRetentionStatement(true)}";
-                    TxtReceiptHash.Text = $"رمز سلامة معاينة الإيصال (ليس دليلاً للتدقيق): AIN-SEC-{secureHash} | Token: {_receiptToken}";
+                    TxtReceiptHash.Text = $"مرجع الوصول المبهم (معاينة إيصال عام): {_receiptToken}";
                 }
                 else
                 {
@@ -228,7 +237,7 @@ namespace AIN_Kiosk
 
                     TxtReceiptDataCaptured.Text = $"• [Simulated - not persisted] Personal Data: Wesam Mohammed | Org: {_configProvider.TenantName}\n• Host Person: {_workflowService.SelectedHostName}\n• Approved Purpose: {_workflowService.SelectedPurpose}";
                     TxtReceiptPurgeDate.Text = $"⚠️ [Unapproved test value] Personal data record will be automatically purged after: {_privacyNoticeProvider.GetRetentionStatement(false)}";
-                    TxtReceiptHash.Text = $"Mock Integrity Hash (Receipt preview - not audit evidence): AIN-SEC-{secureHash} | Token: {_receiptToken}";
+                    TxtReceiptHash.Text = $"Opaque Access Token (Public Receipt Reference): {_receiptToken}";
                 }
 
                 _workflowService.InitializeIdleTimer(TimeSpan.FromSeconds(60));

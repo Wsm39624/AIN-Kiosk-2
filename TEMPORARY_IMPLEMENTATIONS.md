@@ -20,9 +20,8 @@ The table below outlines the operational elements currently decoupled from physi
 
 > ⚠️ **Critical Compliance Notice:** The values listed below are configured exclusively for verification layouts and must be overwritten prior to operational deployment.
 
-* 📅 **Data Retention Default:** The 10-year data retention statement rendered within the Privacy Receipt view represents a temporary mockup threshold utilized for regulatory visualization. The true schedule must be fetched from the administrator policy manager.
-* 🔐 **Forensic Evidence Substring:** The receipt integrity value represents a truncated random `GUID` string for UI formatting checkups and does **not** constitute a true cryptographic audit trail.
-
+* 📅 **Data Retention Default:** The 10-year retention rule displayed in the Privacy Receipt is a synthetic default managed entirely outside the UI view context layer by `IKioskPrivacyNoticeProvider`. The WPF Kiosk behaves strictly as a stateless consumer and does not hardcode this configuration value.
+* 🔐 **Receipt Integrity Check:** The generation of a pseudo-SHA-256 hash substring has been completely removed from the UI layer per engineering instructions. The kiosk now strictly exposes the opaque session token as a baseline public access reference.
 ---
 
 ## 3. Interfaces Declared But Not Wired
@@ -36,3 +35,7 @@ The following behavioral interfaces are fully declared in the architecture basel
 2. `IBadgePrinter`
    * **Current Status:** Routed into safe hardware bypass logic.
    * **Missing Wire:** Awaiting integration with physical Zebra badge printer spooling routines.
+
+3. `IRegistrationQueue`
+   * **Current Status:** Routed via `MockRegistrationQueue` to prevent runtime crashes.
+   * **Missing Wire:** Ephemeral memory tracing only; requires a persistent offline local database or encrypted file queue before production clearance.

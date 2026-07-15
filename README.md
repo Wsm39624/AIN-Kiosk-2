@@ -28,3 +28,4 @@ Clone the sanitized repository structure and navigate to the project root:
 ```bash
 git clone [https://github.com/Wsm39624/AIN-Kiosk-2.git](https://github.com/Wsm39624/AIN-Kiosk-2.git)
 cd AIN-Kiosk-2
+.

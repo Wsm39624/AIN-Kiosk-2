@@ -4,7 +4,7 @@ using System.Text;
 
 namespace AIN_Kiosk.Services
 {
-    public class KioskConfigurationProvider
+    public class KioskConfigurationProvider : AIN_Kiosk.IKioskConfigurationProvider
     {
         // هذه القيم سيتم جلبها مستقبلاً من الـ Backend (ABP.io)
         public string TenantName => "EBTCO / BDO Al-Amri";

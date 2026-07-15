@@ -4,7 +4,7 @@ using System.Text;
 
 namespace AIN_Kiosk.Services
 {
-    public class KioskPrivacyNoticeProvider
+    public class KioskPrivacyNoticeProvider : AIN_Kiosk.IKioskPrivacyNoticeProvider
     {
         public string GetPrivacyNoticeVersion() => "v1.0-Interim";
 
