@@ -9,7 +9,7 @@ namespace AIN_Kiosk.Services
     {
         public BitmapImage GenerateQrCodeImage(string content)
         {
-            // 🔒 توليد الـ QR محلياً بالكامل بداخل الذاكرة العشوائية لحظر أي تسريب شبكي
+            //  توليد الـ QR محلياً بالكامل بداخل الذاكرة العشوائية لحظر أي تسريب شبكي
             using (var qrGenerator = new QRCodeGenerator())
             using (var qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q))
             using (var qrCode = new PngByteQRCode(qrCodeData))
@@ -27,7 +27,7 @@ namespace AIN_Kiosk.Services
 
                 bitmapImage.Freeze(); // تجميد الصورة في الذاكرة لتسريع الأداء
 
-                // 🔒 الإجراء الأمني المطلوب: مسح مصفوفة البايتات فوراً من الـ RAM لحماية الخصوصية
+                //  الإجراء الأمني المطلوب: مسح مصفوفة البايتات فوراً من الـ RAM لحماية الخصوصية
                 Array.Clear(qrCodeAsPngByteArr, 0, qrCodeAsPngByteArr.Length);
 
                 return bitmapImage;

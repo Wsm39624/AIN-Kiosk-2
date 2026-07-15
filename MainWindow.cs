@@ -28,9 +28,13 @@ namespace AIN_Kiosk
         private readonly LocalQrCodeService _qrCodeService;
         private readonly IRegistrationQueue _registrationQueue;
 
-        // موفرات الإعدادات والخصوصية لمنع الـ Hardcoding
+        private readonly IReceiptReferenceProvider _receiptReferenceProvider;
+
         private readonly IKioskConfigurationProvider _configProvider;
         private readonly IKioskPrivacyNoticeProvider _privacyNoticeProvider;
+
+
+
 
         public MainWindow()
         {
@@ -46,7 +50,8 @@ namespace AIN_Kiosk
             _configProvider = new KioskConfigurationProvider();
             _privacyNoticeProvider = new KioskPrivacyNoticeProvider();
             _qrCodeService = new LocalQrCodeService(); 
-            _registrationQueue = new MockRegistrationQueue(); 
+            _registrationQueue = new MockRegistrationQueue();
+            _receiptReferenceProvider = new MockReceiptReferenceProvider();
 
             _workflowService.OnIdleTimeout += () =>
             {
@@ -77,7 +82,7 @@ namespace AIN_Kiosk
             TxtRetroDocNumber.Text = "";
             TxtRetroHostName.Text = "Wesam Mohammed";
 
-            // 🔒 تصحيح اسم العنصر البرمجي لمطابقة الـ XAML
+            //  تصحيح اسم العنصر البرمجي لمطابقة XAML
             ChkRetroAttestation.IsChecked = false;
 
             ViewHome.Visibility = Visibility.Collapsed;
@@ -85,7 +90,7 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // ================= [ نظام المعالجة والفحص الرقمي ] =================
+        // [ نظام المعالجة والفحص الرقمي ]
         private async Task StartKioskWorkflowAsync()
         {
             _workflowService.IsInErrorState = false;
@@ -142,7 +147,7 @@ namespace AIN_Kiosk
             }
         }
 
-        // ================= [ دالة السجل بأثر رجعي - الأمانة الهندسية ] =================
+        //  دالة السجل بأثر رجعي - الأمانة الهندسية  
         private void BtnSubmitRetroactive_Click(object sender, RoutedEventArgs e)
         {
             // 1. التحقق من تعبئة البيانات الأساسية
@@ -152,14 +157,14 @@ namespace AIN_Kiosk
                 return;
             }
 
-            // 2. التحقق من تفعيل مربع الإقرار لمطابقة الـ XAML
+            // 2. التحقق من تفعيل مربع الإقرار لمطابقة  XAML
             if (ChkRetroAttestation.IsChecked != true)
             {
                 MessageBox.Show(isArabic ? "يجب تفعيل مربع الإقرار والمصادقة الإلكترونية لاعتماد السجل بأثر رجعي!" : "You must check the attestation box to proceed!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 🔒 هنا المكان الصحيح: استدعاء الواجهة التشبيهية امتثالاً لطلب المهندس خالد بعد التحقق وقبل النجاح
+            //  هنا المكان الصحيح: استدعاء الواجهة التشبيهية امتثالاً لطلب المهندس خالد بعد التحقق وقبل النجاح
             _registrationQueue.EnqueueMockRecord(_workflowService.CurrentFlow, TxtRetroVisitorName.Text);
 
             // 3. عرض رسالة الحفظ التجريبية الصادقة
@@ -177,7 +182,7 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        // ================= [ محركات الطباعة والخصوصية المعزولة ] =================
+        //  محركات الطباعة والخصوصية المعزولة 
         private async void BtnAcceptPrint_Click(object sender, RoutedEventArgs e)
         {
             if (_workflowService.IsInErrorState)
@@ -260,7 +265,7 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        // ================= [ ميكانيكية إعادة الضبط الشاملة ] =================
+        //  ميكانيكية إعادة الضبط الشاملة 
         private void ResetToHomeView(bool forceResetToArabic = false)
         {
             ViewPrivacy.Visibility = Visibility.Collapsed;
@@ -329,7 +334,7 @@ namespace AIN_Kiosk
             }
         }
 
-        // ================= [ أزرار التحكم والوصول الآمن لبيانات الويب ] =================
+        //  أزرار التحكم والوصول الآمن لبيانات الويب 
         private void BtnViewPersonalData_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(
@@ -348,7 +353,7 @@ namespace AIN_Kiosk
             );
         }
 
-        // ================= [ دالة لوحة المفاتيح والتركيز التلقائي ] =================
+        //  دالة لوحة المفاتيح والتركيز التلقائي 
         private void KioskTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
             try
@@ -365,7 +370,7 @@ namespace AIN_Kiosk
             }
         }
 
-        // ================= [ التحقق وصياغة الـ QR المحلي الخالي من الـ PII ] =================
+        // التحقق وصياغة  QR المحلي الخالي من الـ PII
         private void BtnNextToPrivacy_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrWhiteSpace(TxtHostName.Text))
@@ -399,13 +404,12 @@ namespace AIN_Kiosk
             try
             {
                 // إنشاء توكن عشوائي مبهم وتخزينه في الجلسة 
-                _receiptToken = Guid.NewGuid().ToString("N").ToUpperInvariant();
+                _receiptToken = _receiptReferenceProvider.GetSyntheticToken();
 
-                // دمج التوكن مع رابط الإيصال المعتمد
-                string qrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
-
+                // بناء الرابط النظيف بعد استهلاك التوكن
+                string localQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
                 // التوليد المحلي الصارم بدون إنترنت
-                KioskQrImage.Source = _qrCodeService.GenerateQrCodeImage(qrPayload);
+                KioskQrImage.Source = _qrCodeService.GenerateQrCodeImage(localQrPayload);
             }
             catch (Exception ex)
             {
@@ -422,14 +426,14 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // ================= [ محرك الترجمة واستبدال الرموز النائبة ديناميكياً ] =================
+        // محرك الترجمة واستبدال الرموز النائبة ديناميكياً 
         private void ApplyLanguage()
         {
             if (_workflowService == null || _localizationService == null || _configProvider == null || _privacyNoticeProvider == null) return;
 
             KioskWindow.FlowDirection = isArabic ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
 
-            // 🔒 إزالة علامة الاستفهام (?) لحظر تحذيرات المترجم حول الـ Nullability
+            //  إزالة علامة الاستفهام (?) لحظر تحذيرات المترجم حول  Nullability
             string langText = _localizationService.GetText("BtnLangToggle", !isArabic);
             BtnLangToggle.Content = string.IsNullOrEmpty(langText) ? (isArabic ? "English" : "العربية") : langText;
 
@@ -469,7 +473,7 @@ namespace AIN_Kiosk
             LblRetroHost.Text = _localizationService.GetText("LblRetroHost", isArabic);
             LblRetroPurpose.Text = _localizationService.GetText("LblRetroPurpose", isArabic);
 
-            // 🔒 تصحيح اسم العنصر البرمجي لمطابقة الـ XAML
+            //  تصحيح اسم العنصر البرمجي لمطابقة  XAML
             ChkRetroAttestation.Content = _localizationService.GetText("ChkRetroAttestation", isArabic);
 
             BtnSubmitRetroactive.Content = _localizationService.GetText("BtnSubmitRetroactive", isArabic);

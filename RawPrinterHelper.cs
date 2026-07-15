@@ -13,7 +13,7 @@ namespace AIN_Kiosk
         [DllImport("winspool.drv", EntryPoint = "ClosePrinter", SetLastError = true, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
         private static extern bool ClosePrinter(IntPtr hPrinter);
 
-        // ✅ تم تصحيح السطر 17 هنا وإزالة وسام Padding المسبب للخطأ
+        
         [DllImport("winspool.drv", EntryPoint = "StartDocPrinterA", SetLastError = true, CharSet = CharSet.Ansi, ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
         private static extern bool StartDocPrinter(IntPtr hPrinter, int level, [In] ref DOCINFOA di);
 

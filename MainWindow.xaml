@@ -67,7 +67,7 @@
             </Button>
         </Grid>
 
-        <!-- ================= [ الشاشة 1: القائمة الرئيسية ] ================= -->
+        <!--  الشاشة 1: القائمة الرئيسية  -->
         <Viewbox x:Name="ViewHome" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="WelcomeTitle" Text="مرحباً بك في جهاز الخدمة الذاتية" FontSize="46" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,16"/>
@@ -80,7 +80,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- ================= [ الشاشة 2: محاكاة فحص الوثائق الضوئية ] ================= -->
+        <!--  الشاشة 2: محاكاة فحص الوثائق الضوئية -->
         <Viewbox x:Name="ViewScan" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="ScanTitle" Text="جاري تهيئة القارئ..." FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,20"/>
@@ -89,7 +89,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- ================= [ الشاشة 3: استكمال بيانات الزيارة ] ================= -->
+        <!--  الشاشة 3: استكمال بيانات الزيارة -->
         <Viewbox x:Name="ViewDetails" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="DetailsTitle" Text="استكمال معلومات الزيارة" FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,10"/>
@@ -118,7 +118,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- ================= [ الشاشة 4: وثيقة الخصوصية ومخرجات المعاينة الرقمية ] ================= -->
+        <!--  الشاشة 4: وثيقة الخصوصية ومخرجات المعاينة الرقمية  -->
         <Viewbox x:Name="ViewPrivacy" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <Grid Width="1720" Height="850" Margin="20">
                 <Grid.ColumnDefinitions>
@@ -189,7 +189,7 @@
             </Grid>
         </Viewbox>
 
-        <!-- ================= [ الشاشة 5: تسجيل الزوار بأثر رجعي للامتثال الرقابي ] ================= -->
+        <!-- الشاشة 5: تسجيل الزوار بأثر رجعي للامتثال الرقابي  -->
         <Viewbox x:Name="ViewRetroactive" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="TxtRetroTitle" Text="تسجيل زائر بأثر رجعي (Retroactive Entry)" FontSize="38" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,5"/>

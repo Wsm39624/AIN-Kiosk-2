@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using AIN_Kiosk.Adapters; // 🎯 استدعاء طبقة المحولات
+using AIN_Kiosk.Adapters; //  استدعاء طبقة المحولات
 
 namespace AIN_Kiosk.Services
 {
@@ -9,7 +9,7 @@ namespace AIN_Kiosk.Services
         private const string ZebraPrinterName = "ZDesigner GK420t";
         private readonly PrinterAdapter _printerAdapter = new(); // تهيئة المحول
 
-        // 🎯 التوقيع الجديد المحدث ليستقبل 4 متغيرات بالتزامن
+        //  التوقيع الجديد المحدث ليستقبل 4 متغيرات بالتزامن
         public async Task<bool> PrintVisitorBadgeAsync(string hostName, string purpose, string mobile, string visitorToken)
         {
             string visitor1Name = "Wesam Mohammed";

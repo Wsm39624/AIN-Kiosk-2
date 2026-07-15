@@ -5,12 +5,12 @@ namespace AIN_Kiosk.Services
 {
     public class KioskWorkflowService
     {
-        // 🔄 الأحداث (Events) لإبلاغ الواجهة بالتحديثات تلقائياً
+        //  الأحداث (Events) لإبلاغ الواجهة بالتحديثات تلقائياً
         public event Action<string>? OnFlowChanged;
         public event Action<bool>? OnErrorStateChanged;
         public event Action? OnIdleTimeout;
 
-        // 🧠 الحالات الداخليّة للمسار (State Management)
+        //  الحالات الداخليّة للمسار (State Management)
         private string _currentFlow = "WalkIn";
         private bool _isInErrorState = false;
         private DispatcherTimer? _idleTimer;
@@ -46,7 +46,7 @@ namespace AIN_Kiosk.Services
             }
         }
 
-        // ⏱️ إدارة مؤقت الخمول (Idle Timer) بشكل مستقل
+        //  إدارة مؤقت الخمول (Idle Timer) بشكل مستقل
         public void InitializeIdleTimer(TimeSpan timeout)
         {
             _idleTimer?.Stop();
@@ -73,7 +73,7 @@ namespace AIN_Kiosk.Services
             _idleTimer?.Stop();
         }
 
-        // 🧹 تصفير بيانات الجلسة عند العودة للشاشة الرئيسية
+        //  تصفير بيانات الجلسة عند العودة للشاشة الرئيسية
         public void ResetSession()
         {
             CurrentFlow = "WalkIn";

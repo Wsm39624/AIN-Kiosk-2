@@ -2,7 +2,7 @@
 
 namespace AIN_Kiosk.Services
 {
-    // 📦 نموذج بيانات الإيصال الرقمي (Receipt DTO)
+    //  نموذج بيانات الإيصال الرقمي (Receipt DTO)
     public class ReceiptDetails
     {
         public string ReceptionistAlert { get; set; } = string.Empty;

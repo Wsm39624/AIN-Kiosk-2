@@ -41,4 +41,19 @@ namespace AIN_Kiosk
     {
         string GetRetentionStatement(bool isArabic);
     }
+
+    public interface IReceiptReferenceProvider
+    {
+        string GetSyntheticToken();
+    }
+
+    //  المحاكي الملتزم بإرجاع توكن تطويري صريح وغير مضلل رقابياً
+    public class MockReceiptReferenceProvider : IReceiptReferenceProvider
+    {
+        public string GetSyntheticToken()
+        {
+         
+            return "DEV-SYNTHETIC-" + System.Guid.NewGuid().ToString("N").ToUpperInvariant();
+        }
+    }
 }
