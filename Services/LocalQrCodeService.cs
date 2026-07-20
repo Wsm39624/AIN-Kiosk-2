@@ -1,37 +1,40 @@
-﻿using QRCoder;
-using System;
+﻿using System;
 using System.IO;
 using System.Windows.Media.Imaging;
+using QRCoder;
 
-namespace AIN_Kiosk.Services
+namespace AIN_Kiosk;
+
+public sealed class LocalQrCodeService
 {
-    public class LocalQrCodeService
+    public BitmapImage GenerateBitmap(string payload, int pixelsPerModule = 12)
     {
-        public BitmapImage GenerateQrCodeImage(string content)
-        {
-            //  توليد الـ QR محلياً بالكامل بداخل الذاكرة العشوائية لحظر أي تسريب شبكي
-            using (var qrGenerator = new QRCodeGenerator())
-            using (var qrCodeData = qrGenerator.CreateQrCode(content, QRCodeGenerator.ECCLevel.Q))
-            using (var qrCode = new PngByteQRCode(qrCodeData))
-            {
-                byte[] qrCodeAsPngByteArr = qrCode.GetGraphic(20);
+        ArgumentException.ThrowIfNullOrWhiteSpace(payload);
 
-                var bitmapImage = new BitmapImage();
-                using (var stream = new MemoryStream(qrCodeAsPngByteArr))
-                {
-                    bitmapImage.BeginInit();
-                    bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                    bitmapImage.StreamSource = stream;
-                    bitmapImage.EndInit();
-                }
+        // Generate raw PNG bytes locally without external service dependency
+        byte[] pngBytes = PngByteQRCodeHelper.GetQRCode(
+            payload,
+            QRCodeGenerator.ECCLevel.Q,
+            pixelsPerModule);
 
-                bitmapImage.Freeze(); // تجميد الصورة في الذاكرة لتسريع الأداء
+        using MemoryStream stream = new(pngBytes);
 
-                //  الإجراء الأمني المطلوب: مسح مصفوفة البايتات فوراً من الـ RAM لحماية الخصوصية
-                Array.Clear(qrCodeAsPngByteArr, 0, qrCodeAsPngByteArr.Length);
+        BitmapImage image = new();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.StreamSource = stream;
+        image.EndInit();
+        image.Freeze();
 
-                return bitmapImage;
-            }
-        }
+        // Clear sensitive buffer from memory
+        Array.Clear(pngBytes, 0, pngBytes.Length);
+
+        return image;
+    }
+
+    // Backward compatibility wrapper for existing tests
+    public BitmapImage GenerateQrCodeImage(string payload, int pixelsPerModule = 12)
+    {
+        return GenerateBitmap(payload, pixelsPerModule);
     }
 }

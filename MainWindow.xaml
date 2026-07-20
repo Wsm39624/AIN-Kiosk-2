@@ -10,7 +10,7 @@
         WindowStyle="None" WindowState="Maximized" ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- Touch screen friendly button style with accessible dimensions -->
+        <!-- Touch screen friendly primary button style -->
         <Style x:Key="KioskButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontSize" Value="32"/>
@@ -23,7 +23,7 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="24"
+                                CornerRadius="12"
                                 Width="{TemplateBinding Width}"
                                 Height="{TemplateBinding Height}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -33,13 +33,37 @@
             </Setter>
         </Style>
 
-        <!-- High contrast input text box style incorporating dynamic soft placeholders -->
+        <!-- Rounded selection chips style -->
+        <Style x:Key="ChipButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="65"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- High contrast input text box style incorporating dynamic placeholders -->
         <Style x:Key="KioskTextBoxStyle" TargetType="TextBox">
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="Padding" Value="15"/>
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="Padding" Value="14,10"/>
             <Setter Property="Background" Value="#F8FAFC"/>
             <Setter Property="BorderBrush" Value="#CBD5E1"/>
-            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Margin" Value="0,0,0,10"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -47,7 +71,8 @@
                         <Grid>
                             <Border x:Name="BaseBorder" Background="{TemplateBinding Background}" 
                                     BorderBrush="{TemplateBinding BorderBrush}" 
-                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="8">
                                 <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
                             </Border>
                             <!-- Watermark text rendering logic using tag parameters -->
@@ -84,24 +109,39 @@
 
         <!-- Top navigation and header interface bar -->
         <Grid Grid.Row="0" Margin="60,30,60,10">
-            <!-- Hidden administrative supervisor gateway hitbox -->
-            <Button x:Name="BtnSupervisorTrigger" Width="120" Height="60" HorizontalAlignment="Right" Background="Transparent" BorderBrush="Transparent" Click="BtnSupervisorTrigger_Click">
+            <Button x:Name="BtnSupervisorTrigger" 
+                    Click="BtnSupervisorTrigger_Click" 
+                    Visibility="Visible"
+                    Background="#F1F5F9"
+                    BorderBrush="#CBD5E1"
+                    BorderThickness="1"
+                    Padding="10,5"
+                    Margin="280,10,280,5">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="Transparent"/>
+                        <Border Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}" 
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
                     </ControlTemplate>
                 </Button.Template>
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <TextBlock Text="دخول المشرف" FontWeight="Bold" FontSize="12" Foreground="#334155" HorizontalAlignment="Center"/>
+                    <TextBlock Text="(زر تجريبي)" FontSize="10" Foreground="#64748B" HorizontalAlignment="Center"/>
+                </StackPanel>
             </Button>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <TextBlock x:Name="TxtHeaderLogo" Text="عـيـن | AIN" FontSize="34" FontWeight="Black" Foreground="#0F172A" VerticalAlignment="Center"/>
+                <TextBlock x:Name="TxtHeaderLogo" Text="AIN | عين" FontSize="34" FontWeight="Black" Foreground="#0F172A" VerticalAlignment="Center"/>
             </StackPanel>
 
             <Button x:Name="BtnLangToggle" Content="English" Click="BtnLangToggle_Click"
                     HorizontalAlignment="Left" Background="#FF198754" Width="180" Height="60">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="12">
                             <TextBlock Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" 
                                        Foreground="White" FontSize="22" FontWeight="Bold"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -111,7 +151,7 @@
             </Button>
         </Grid>
 
-        <!-- Screen 1: Home View containing exactly three dynamic touch options -->
+        <!-- Screen 1: Home View -->
         <Viewbox x:Name="ViewHome" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="WelcomeTitle" Text="مرحباً بك في جهاز الخدمة الذاتية" FontSize="46" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,16"/>
@@ -123,13 +163,13 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- Screen 2: Isolated Gate for Supervisor PIN Entry Authentication -->
+        <!-- Screen 2: Supervisor PIN Auth View -->
         <Viewbox x:Name="ViewSupervisorAuth" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
-                <TextBlock x:Name="TxtSupervisorTitle" Text="بوابة المشرف الأمنية" FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock x:Name="TxtSupervisorTitle" Text="بوابة المشرف الأمنية (زر تجريبي)" FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,20"/>
                 <TextBlock x:Name="TxtSupervisorSubtitle" Text="الرجاء إدخال رمز التحقق لتفويض الصلاحيات" FontSize="24" Foreground="#475569" HorizontalAlignment="Center" Margin="0,0,0,40"/>
 
-                <PasswordBox x:Name="TxtSupervisorPin" FontSize="36" Padding="15" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="2" Width="450" HorizontalAlignment="Center" Margin="0,0,0,40"/>
+                <PasswordBox x:Name="TxtSupervisorPin" FontSize="36" Padding="15" Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1" Width="450" HorizontalAlignment="Center" Margin="0,0,0,40"/>
 
                 <UniformGrid Columns="2" Width="600" HorizontalAlignment="Center">
                     <Button x:Name="BtnSubmitPin" Content="تحقق" Background="#198754" Style="{StaticResource KioskButtonStyle}" Width="280" Height="90" FontSize="26" Click="BtnSubmitPin_Click"/>
@@ -138,7 +178,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- Screen 3: Isolated Dashboard Console for Granted Supervisor Actions -->
+        <!-- Screen 3: Supervisor Console View -->
         <Viewbox x:Name="ViewSupervisorConsole" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="TxtConsoleTitle" Text="لوحة تحكم المشرف والعمليات الاستثنائية" FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,40"/>
@@ -148,7 +188,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- Screen 4: Peripheral Optical Document Scanning Interface Page -->
+        <!-- Screen 4: Scanner View -->
         <Viewbox x:Name="ViewScan" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="ScanTitle" Text="جاري تهيئة القارئ..." FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,20"/>
@@ -157,27 +197,27 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- Screen 5: Additional Metadata Capture Forms Grid -->
+        <!-- Screen 5: Visit Details Input Screen -->
         <Viewbox x:Name="ViewDetails" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="DetailsTitle" Text="استكمال معلومات الزيارة" FontSize="40" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,10"/>
                 <TextBlock x:Name="DetailsSubtitle" Text="يرجى تحديد الشخص المضيف وسبب زيارتك اليوم" FontSize="24" Foreground="#475569" HorizontalAlignment="Center" Margin="0,0,0,40"/>
 
                 <TextBlock x:Name="LblHostName" Text="اسم الشخص المضيف:" FontSize="24" FontWeight="SemiBold" Margin="0,10,0,10" TextAlignment="Justify"/>
-                <TextBox x:Name="TxtHostName" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
+                <TextBox x:Name="TxtHostName" Style="{StaticResource KioskTextBoxStyle}" PreviewTextInput="Input_OnlyLetters_PreviewTextInput" GotFocus="KioskTextBox_GotFocus"/>
 
                 <TextBlock x:Name="LblPurpose" Text="سبب الزيارة:" FontSize="24" FontWeight="SemiBold" Margin="0,15,0,10" TextAlignment="Justify"/>
                 <UniformGrid x:Name="GridPurposeChips" Columns="3" Rows="2" Height="160" Margin="0,0,0,10">
-                    <Button x:Name="ChipMeeting" Content="اجتماع عمل" Height="70" Margin="5" FontSize="22" Background="#0D6EFD" Foreground="White" Click="ChipPurpose_Click"/>
-                    <Button x:Name="ChipInterview" Content="مقابلة شخصية" Height="70" Margin="5" FontSize="22" Background="#F1F5F9" Foreground="#0F172A" Click="ChipPurpose_Click"/>
-                    <Button x:Name="ChipMaintenance" Content="صيانة فنية" Height="70" Margin="5" FontSize="22" Background="#F1F5F9" Foreground="#0F172A" Click="ChipPurpose_Click"/>
-                    <Button x:Name="ChipDelivery" Content="توصيل / شحنة" Height="70" Margin="5" FontSize="22" Background="#F1F5F9" Foreground="#0F172A" Click="ChipPurpose_Click"/>
-                    <Button x:Name="ChipVendor" Content="مورد / عميل" Height="70" Margin="5" FontSize="22" Background="#F1F5F9" Foreground="#0F172A" Click="ChipPurpose_Click"/>
-                    <Button x:Name="ChipOther" Content="أخرى" Height="70" Margin="5" FontSize="22" Background="#F1F5F9" Foreground="#0F172A" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipMeeting" Content="اجتماع عمل" Style="{StaticResource ChipButtonStyle}" Background="#0D6EFD" Foreground="White" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipInterview" Content="مقابلة شخصية" Style="{StaticResource ChipButtonStyle}" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipMaintenance" Content="صيانة فنية" Style="{StaticResource ChipButtonStyle}" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipDelivery" Content="توصيل / شحنة" Style="{StaticResource ChipButtonStyle}" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipVendor" Content="مورد / عميل" Style="{StaticResource ChipButtonStyle}" Click="ChipPurpose_Click"/>
+                    <Button x:Name="ChipOther" Content="أخرى" Style="{StaticResource ChipButtonStyle}" Click="ChipPurpose_Click"/>
                 </UniformGrid>
 
                 <TextBlock x:Name="LblMobile" Text="رقم الجوال - اختياري:" FontSize="24" FontWeight="SemiBold" Margin="0,15,0,10" TextAlignment="Justify"/>
-                <TextBox x:Name="TxtMobileNumber" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
+                <TextBox x:Name="TxtMobileNumber" Style="{StaticResource KioskTextBoxStyle}" MaxLength="10" PreviewTextInput="Input_OnlyDigits_PreviewTextInput" GotFocus="KioskTextBox_GotFocus"/>
 
                 <TextBlock x:Name="LblEmail" Text="البريد الإلكتروني - اختياري:" FontSize="24" FontWeight="SemiBold" Margin="0,15,0,10" TextAlignment="Justify"/>
                 <TextBox x:Name="TxtEmail" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
@@ -186,7 +226,7 @@
             </StackPanel>
         </Viewbox>
 
-        <!-- Screen 6: Anonymized Transparency Ledger View. Vertical height and alignment optimized to exclude clippings -->
+        <!-- Screen 6: Privacy & Receipt Screen -->
         <Viewbox x:Name="ViewPrivacy" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <Grid Width="1720" Height="1000" Margin="20">
                 <Grid.ColumnDefinitions>
@@ -195,16 +235,16 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" VerticalAlignment="Top" Margin="20">
-                    <Border x:Name="BorderReceptionistAlert" Background="#FFF3CD" BorderBrush="#FFEBA2" BorderThickness="2" CornerRadius="16" Padding="20" Margin="0,10,0,20" Visibility="Collapsed">
+                    <Border x:Name="BorderReceptionistAlert" Background="#FFF3CD" BorderBrush="#FFEBA2" BorderThickness="1" CornerRadius="12" Padding="20" Margin="0,10,0,20" Visibility="Collapsed">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="🔔" FontSize="28" Margin="0,0,15,0" VerticalAlignment="Center"/>
                             <TextBlock x:Name="TxtReceptionistAlert" Text="جاري إخطار موظف الاستقبال..." FontSize="22" FontWeight="Black" Foreground="#856404" VerticalAlignment="Center" TextWrapping="Wrap" Width="950"/>
                         </StackPanel>
                     </Border>
 
-                    <TextBlock x:Name="PrivacyTitle" Text="وثيقة سياسة الخصوصية وحماية البيانات" FontSize="36" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,20"/>
+                    <TextBlock x:Name="PrivacyTitle" Text="إقرار سياسة الخصوصية الفوري" FontSize="36" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,20"/>
 
-                    <Border Background="White" CornerRadius="16" Padding="35" MinHeight="450" Height="Auto" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <Border Background="White" CornerRadius="12" Padding="35" MinHeight="450" Height="Auto" BorderBrush="#E2E8F0" BorderThickness="1">
                         <Grid>
                             <ScrollViewer x:Name="ScrollPrivacyText" VerticalScrollBarVisibility="Auto" Visibility="Visible">
                                 <TextBlock x:Name="PrivacyBody" FontSize="24" TextWrapping="Wrap" Foreground="#334155" LineHeight="36"/>
@@ -213,15 +253,14 @@
                             <StackPanel x:Name="PanelReceiptDetails" Visibility="Collapsed" VerticalAlignment="Center">
                                 <TextBlock x:Name="TxtReceiptHeader" Text="✓ تم إصدار إيصال الخصوصية الرقمي بنجاح" FontSize="26" FontWeight="Bold" Foreground="#198754" Margin="0,0,0,15"/>
                                 <TextBlock x:Name="TxtReceiptDataCaptured" FontSize="24" Foreground="#334155" Margin="0,5,0,5" LineHeight="32"/>
-                                <TextBlock x:Name="TxtReceiptLegal" Text="الأساس القانوني: نظام حماية البيانات الشخصية السعودي (PDPL)" FontSize="22" FontWeight="SemiBold" Foreground="#475569" Margin="0,10,0,5"/>
                                 <TextBlock x:Name="TxtReceiptPurgeDate" FontSize="22" FontWeight="Bold" Foreground="#DC3545" Margin="0,5,0,5"/>
                                 <TextBlock x:Name="TxtReceiptHash" FontSize="22" Foreground="#94A3B8" FontFamily="Consolas" Margin="0,10,0,0"/>
 
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,25,0,0">
                                     <Button x:Name="BtnViewPersonalData" Content="عرض بياناتي الشخصية" Click="BtnViewPersonalData_Click" Width="320" Height="70" Margin="10" Background="#475569" Foreground="White" FontSize="22" FontWeight="Bold">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="12">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="8">
                                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </ControlTemplate>
@@ -230,7 +269,7 @@
                                     <Button x:Name="BtnExercisePrivacyRights" Content="ممارسة حقوق الخصوصية" Click="BtnExercisePrivacyRights_Click" Width="320" Height="70" Margin="10" Background="#475569" Foreground="White" FontSize="22" FontWeight="Bold">
                                         <Button.Template>
                                             <ControlTemplate TargetType="Button">
-                                                <Border Background="{TemplateBinding Background}" CornerRadius="12">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="8">
                                                     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                 </Border>
                                             </ControlTemplate>
@@ -247,10 +286,10 @@
                     <TextBlock x:Name="PrintStatusLabel" FontSize="24" FontWeight="SemiBold" TextAlignment="Center" Margin="0,15,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
 
-                <!-- Dedicated local QR asset vector container panel -->
+                <!-- Local QR Container -->
                 <StackPanel x:Name="QrCodeContainer" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20" Visibility="Collapsed">
                     <TextBlock x:Name="QrLabel" Text="امسح الرمز للاحتفاظ بالوثيقة" FontSize="24" FontWeight="Bold" Foreground="#0F172A" Margin="0,0,0,20" HorizontalAlignment="Center"/>
-                    <Border Background="White" Width="320" Height="320" CornerRadius="20" BorderBrush="#CBD5E1" BorderThickness="2" Padding="15">
+                    <Border Background="White" Width="320" Height="320" CornerRadius="12" BorderBrush="#CBD5E1" BorderThickness="1" Padding="15">
                         <Image x:Name="KioskQrImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                     </Border>
                     <TextBlock Text="Powered by AIN Visitors Platform" FontSize="16" Foreground="#94A3B8" Margin="0,15,0,0" HorizontalAlignment="Center" FontWeight="Medium"/>
@@ -258,29 +297,29 @@
             </Grid>
         </Viewbox>
 
-        <!-- Screen 7: Supervisor Audited Exceptional Registration Subsystem -->
+        <!-- Screen 7: Retroactive Logging View -->
         <Viewbox x:Name="ViewRetroactive" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
             <StackPanel Width="900" Margin="20">
                 <TextBlock x:Name="TxtRetroTitle" Text="تسجيل زائر بأثر رجعي" FontSize="38" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                <Border Background="#FFF3CD" CornerRadius="12" Padding="15" Margin="0,0,0,20">
-                    <TextBlock x:Name="TxtRetroWarning" Text="⚠️ تنبيه أمني: أنت تقوم بتسجيل حركة زائر سابقة يدوياً. سيتم تسجيل الحد الأدنى من البيانات الممتثلة رقابياً، وهذا الإجراء يخضع للتدقيق الصارم." FontSize="22" FontWeight="SemiBold" Foreground="#856404" TextWrapping="Wrap"/>
+                <Border Background="#FFF3CD" CornerRadius="8" Padding="15" Margin="0,0,0,20">
+                    <TextBlock x:Name="TxtRetroWarning" Text="⚠️ تنبيه أمني: أنت تقوم بتسجيل حركة زائر سابقة يدوياً. يخضع هذا الإجراء للتدقيق الصارم." FontSize="22" FontWeight="SemiBold" Foreground="#856404" TextWrapping="Wrap"/>
                 </Border>
 
                 <UniformGrid Columns="2" Margin="0,0,0,10">
                     <StackPanel Margin="5">
                         <TextBlock x:Name="LblRetroVisName" Text="اسم الزائر بالكامل:" FontSize="22" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox x:Name="TxtRetroVisitorName" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
+                        <TextBox x:Name="TxtRetroVisitorName" Style="{StaticResource KioskTextBoxStyle}" PreviewTextInput="Input_OnlyLetters_PreviewTextInput" GotFocus="KioskTextBox_GotFocus"/>
                     </StackPanel>
                     <StackPanel Margin="5">
                         <TextBlock x:Name="LblRetroDocNum" Text="رقم الوثيقة / الهوية:" FontSize="22" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox x:Name="TxtRetroDocNumber" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
+                        <TextBox x:Name="TxtRetroDocNumber" Style="{StaticResource KioskTextBoxStyle}" MaxLength="10" PreviewTextInput="Input_OnlyDigits_PreviewTextInput" GotFocus="KioskTextBox_GotFocus"/>
                     </StackPanel>
                 </UniformGrid>
 
                 <UniformGrid Columns="2" Margin="0,0,0,10">
                     <StackPanel Margin="5">
                         <TextBlock x:Name="LblRetroHost" Text="اسم الموظف المضيف:" FontSize="22" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <TextBox x:Name="TxtRetroHostName" Style="{StaticResource KioskTextBoxStyle}" GotFocus="KioskTextBox_GotFocus"/>
+                        <TextBox x:Name="TxtRetroHostName" Style="{StaticResource KioskTextBoxStyle}" PreviewTextInput="Input_OnlyLetters_PreviewTextInput" GotFocus="KioskTextBox_GotFocus"/>
                     </StackPanel>
                     <StackPanel Margin="5">
                         <TextBlock x:Name="LblRetroPurpose" Text="غرض الزيارة الفعلي:" FontSize="22" FontWeight="Bold" Margin="0,0,0,5"/>
@@ -288,7 +327,14 @@
                     </StackPanel>
                 </UniformGrid>
 
-                <CheckBox x:Name="ChkRetroAttestation" Content="أقر وأصادق بصفتي المضيف بأنني رافقت هذا الزائر مادية وأن البيانات أعلاه دقيقة ومطابقة تماماً للواقع." FontSize="22" FontWeight="Bold" Margin="0,20,0,20" Foreground="#0F172A"/>
+                <CheckBox x:Name="ChkRetroAttestation" 
+                          Margin="0,15,0,20" 
+                          FontSize="18" 
+                          FontWeight="Bold" 
+                          Foreground="#0F172A">
+                    <TextBlock TextWrapping="Wrap" 
+                               Text="أقر وأصادق بصفتي المضيف بأن البيانات المدخلة أعلاه صحيحة ودقيقة، وأتحمل كامل المسؤولية عن صحتها." />
+                </CheckBox>
 
                 <Button x:Name="BtnSubmitRetroactive" Content="تأكيد وحفظ السجل بأثر رجعي" Background="#198754" Style="{StaticResource KioskButtonStyle}" Width="900" Click="BtnSubmitRetroactive_Click"/>
                 <Button x:Name="BtnCancelRetroactive" Content="إلغاء والعودة للرئيسية" Background="#6C757D" Style="{StaticResource KioskButtonStyle}" Width="400" Height="80" FontSize="24" Click="BtnCancelRetroactive_Click"/>

@@ -1,7 +1,8 @@
-﻿using System;
-using Xunit;
+﻿using AIN_Kiosk.Adapters;
 using AIN_Kiosk.Services;
-using AIN_Kiosk.Adapters;
+using System;
+using Xunit;
+using static QRCoder.PayloadGenerator;
 
 namespace AIN_Kiosk.Tests
 {
@@ -85,8 +86,8 @@ namespace AIN_Kiosk.Tests
         [Fact]
         public void Test_7_LocalQrGeneration_WithoutInternet_ReturnsFrozenImage()
         {
-            string samplePayload = "https://receipt.ain.ebtco.com/r/SAMPLETOKEN";
-            var image = _qrCodeService.GenerateQrCodeImage(samplePayload);
+            string samplePayload = "AIN|VERSION=1|TOKEN=TESTTOKEN123|FLOW=WalkIn";
+            var image = _qrCodeService.GenerateBitmap(samplePayload);
 
             Assert.NotNull(image);
             Assert.True(image.IsFrozen); // التحقق من تجميد الصورة في الذاكرة لمنع التسريب
