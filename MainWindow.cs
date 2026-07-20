@@ -15,11 +15,10 @@ namespace AIN_Kiosk
     public partial class MainWindow : Window
     {
         private bool isArabic = true;
-
-        // توكن الجلسة الموحد والمبهم لحماية الخصوصية
         private string _receiptToken = string.Empty;
+        private const string SupervisorPinCode = "1234";
 
-        // حقن الخدمات والمحولات المعمارية المعتمدة
+        // Domain services and architecture abstraction definitions
         private readonly KioskWorkflowService _workflowService;
         private readonly BadgePrintService _printService;
         private readonly PrivacyReceiptService _receiptService;
@@ -27,20 +26,15 @@ namespace AIN_Kiosk
         private readonly ScannerAdapter _scannerAdapter;
         private readonly LocalQrCodeService _qrCodeService;
         private readonly IRegistrationQueue _registrationQueue;
-
         private readonly IReceiptReferenceProvider _receiptReferenceProvider;
-
         private readonly IKioskConfigurationProvider _configProvider;
         private readonly IKioskPrivacyNoticeProvider _privacyNoticeProvider;
-
-
-
 
         public MainWindow()
         {
             InitializeComponent();
 
-            // تهيئة حزمة الخدمات المعزولة
+            // Core domain engine boundaries initialization
             _workflowService = new KioskWorkflowService();
             _printService = new BadgePrintService();
             _receiptService = new PrivacyReceiptService();
@@ -49,7 +43,6 @@ namespace AIN_Kiosk
             _qrCodeService = new LocalQrCodeService();
             _configProvider = new KioskConfigurationProvider();
             _privacyNoticeProvider = new KioskPrivacyNoticeProvider();
-            _qrCodeService = new LocalQrCodeService(); 
             _registrationQueue = new MockRegistrationQueue();
             _receiptReferenceProvider = new MockReceiptReferenceProvider();
 
@@ -74,27 +67,26 @@ namespace AIN_Kiosk
             await StartKioskWorkflowAsync();
         }
 
-        private void BtnRetroactive_Click(object sender, RoutedEventArgs e)
+        // Handles secure workflow transitions to the administrative retroactive screen
+        private void BtnRetroactiveEntry_Click(object sender, RoutedEventArgs e)
         {
             _workflowService.CurrentFlow = "Retroactive";
 
-            TxtRetroVisitorName.Text = "";
-            TxtRetroDocNumber.Text = "";
+            TxtRetroVisitorName.Text = string.Empty;
+            TxtRetroDocNumber.Text = string.Empty;
             TxtRetroHostName.Text = "Wesam Mohammed";
-
-            //  تصحيح اسم العنصر البرمجي لمطابقة XAML
             ChkRetroAttestation.IsChecked = false;
 
-            ViewHome.Visibility = Visibility.Collapsed;
+            ViewSupervisorConsole.Visibility = Visibility.Collapsed;
             ViewRetroactive.Visibility = Visibility.Visible;
             ApplyLanguage();
         }
 
-        // [ نظام المعالجة والفحص الرقمي ]
+        // Coordinates peripheral asynchronous scan executions
         private async Task StartKioskWorkflowAsync()
         {
             _workflowService.IsInErrorState = false;
-            PrintStatusLabel.Text = "";
+            PrintStatusLabel.Text = string.Empty;
             QrCodeContainer.Visibility = Visibility.Collapsed;
 
             ViewHome.Visibility = Visibility.Collapsed;
@@ -109,12 +101,15 @@ namespace AIN_Kiosk
             catch (Exception ex)
             {
                 isScanValid = false;
-                Debug.WriteLine($"[Scanner Error] Scan failed to execute safely: {ex.Message}");
-                MessageBox.Show(
-                    isArabic ? "⚠️ حدث خطأ فني غير متوقع في جهاز قارئ الهوية، يرجى المحاولة لاحقاً."
-                             : "⚠️ An unexpected scanner error occurred. Please try again later.",
-                    "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Error
-                );
+                Debug.WriteLine($"[Scanner Fault] Optical scanner integration exception: {ex.Message}");
+
+                string errorTitle = _localizationService.GetText("KioskAlertTitle", isArabic);
+                if (string.IsNullOrWhiteSpace(errorTitle)) errorTitle = isArabic ? "تنبيه النظام" : "System Alert";
+
+                string errorMsg = _localizationService.GetText("ScannerFatalErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(errorMsg)) errorMsg = isArabic ? "⚠️ حدث خطأ فني غير متوقع في جهاز قارئ الهوية، يرجى المحاولة لاحقاً." : "⚠️ An unexpected scanner error occurred. Please try again later.";
+
+                MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
             if (isScanValid)
@@ -133,7 +128,7 @@ namespace AIN_Kiosk
                 else
                 {
                     TxtHostName.Text = "Eng. Khaled Alamri";
-                    TxtMobileNumber.Text = "";
+                    TxtMobileNumber.Text = string.Empty;
 
                     if (TxtEmail != null) TxtEmail.Text = "wessamaltabaa@gmail.com";
 
@@ -147,32 +142,36 @@ namespace AIN_Kiosk
             }
         }
 
-        //  دالة السجل بأثر رجعي - الأمانة الهندسية  
+        // Processes retroactive form submission with strict criteria assertions
         private void BtnSubmitRetroactive_Click(object sender, RoutedEventArgs e)
         {
-            // 1. التحقق من تعبئة البيانات الأساسية
+            string validationTitle = _localizationService.GetText("KioskAlertTitle", isArabic);
+            if (string.IsNullOrWhiteSpace(validationTitle)) validationTitle = isArabic ? "تنبيه التحقق" : "Validation Alert";
+
             if (string.IsNullOrWhiteSpace(TxtRetroVisitorName.Text) || string.IsNullOrWhiteSpace(TxtRetroDocNumber.Text) || string.IsNullOrWhiteSpace(TxtRetroHostName.Text))
             {
-                MessageBox.Show(isArabic ? "عذراً، يجب تعبئة كافة البيانات الأساسية لحفظ السجل!" : "All fields are required for retroactive logging!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
+                string missingFieldsMsg = _localizationService.GetText("MissingFieldsErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(missingFieldsMsg)) missingFieldsMsg = isArabic ? "عذراً، يجب تعبئة كافة البيانات الأساسية لحفظ السجل!" : "All fields are required for retroactive logging!";
+
+                MessageBox.Show(missingFieldsMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // 2. التحقق من تفعيل مربع الإقرار لمطابقة  XAML
             if (ChkRetroAttestation.IsChecked != true)
             {
-                MessageBox.Show(isArabic ? "يجب تفعيل مربع الإقرار والمصادقة الإلكترونية لاعتماد السجل بأثر رجعي!" : "You must check the attestation box to proceed!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
+                string uncheckedAttestationMsg = _localizationService.GetText("UncheckedAttestationErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(uncheckedAttestationMsg)) uncheckedAttestationMsg = isArabic ? "يجب تفعيل مربع الإقرار والمصادقة الإلكترونية لاعتماد السجل بأثر رجعي!" : "You must check the attestation box to proceed!";
+
+                MessageBox.Show(uncheckedAttestationMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            //  هنا المكان الصحيح: استدعاء الواجهة التشبيهية امتثالاً لطلب المهندس خالد بعد التحقق وقبل النجاح
             _registrationQueue.EnqueueMockRecord(_workflowService.CurrentFlow, TxtRetroVisitorName.Text);
 
-            // 3. عرض رسالة الحفظ التجريبية الصادقة
-            MessageBox.Show(
-                isArabic ? "✓ [محاكاة - لم يتم الحفظ] تم تأكيد السجل بأثر رجعي محلياً بنجاح.\n\n⚠️ تنبيه: الربط الفعلي مع الخلفية معلق (Backend integration pending)."
-                         : "✓ [Simulated - not persisted] Retroactive record confirmed locally.\n\n⚠️ Notice: Backend integration pending.",
-                "AIN Kiosk - Prototype Status", MessageBoxButton.OK, MessageBoxImage.Information
-            );
+            string completionMsg = _localizationService.GetText("RetroactiveSubmitSuccessMsg", isArabic);
+            if (string.IsNullOrWhiteSpace(completionMsg)) completionMsg = isArabic ? "✓ [محاكاة - لم يتم الحفظ] تم تأكيد السجل بأثر رجعي محلياً بنجاح.\n\n⚠️ تنبيه: الربط الفعلي مع الخلفية معلق (Backend integration pending)." : "✓ [Simulated - not persisted] Retroactive record confirmed locally.\n\n⚠️ Notice: Backend integration pending.";
+
+            MessageBox.Show(completionMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
 
             ResetToHomeView(forceResetToArabic: true);
         }
@@ -182,7 +181,7 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        //  محركات الطباعة والخصوصية المعزولة 
+        // Deploys active hardware spool simulation routines
         private async void BtnAcceptPrint_Click(object sender, RoutedEventArgs e)
         {
             if (_workflowService.IsInErrorState)
@@ -195,7 +194,10 @@ namespace AIN_Kiosk
             _workflowService.StopIdleTimer();
 
             PrintStatusLabel.Foreground = Brushes.DarkBlue;
-            PrintStatusLabel.Text = isArabic ? "⏳ جاري محاكاة طباعة التصميم ثنائي الوجه (Zebra Printer Emulator)..." : "⏳ Running Zebra printer fallback emulator...";
+
+            string spoolingText = _localizationService.GetText("SpoolingStatusLabel", isArabic);
+            if (string.IsNullOrWhiteSpace(spoolingText)) spoolingText = isArabic ? "⏳ جاري محاكاة طباعة التصميم ثنائي الوجه (Zebra Printer Emulator)..." : "⏳ Running Zebra printer fallback emulator...";
+            PrintStatusLabel.Text = spoolingText;
 
             bool isPrintSuccess = await _printService.PrintVisitorBadgeAsync(
                 _workflowService.SelectedHostName,
@@ -206,7 +208,7 @@ namespace AIN_Kiosk
 
             if (isPrintSuccess)
             {
-                PrintStatusLabel.Text = "";
+                PrintStatusLabel.Text = string.Empty;
                 ScrollPrivacyText.Visibility = Visibility.Collapsed;
                 BtnAcceptPrint.Visibility = Visibility.Collapsed;
 
@@ -215,14 +217,12 @@ namespace AIN_Kiosk
                 BtnDoneReceipt.Visibility = Visibility.Visible;
                 BorderReceptionistAlert.Visibility = Visibility.Visible;
 
-                ReceiptDetails receipt = _receiptService.GenerateReceipt(
+                _receiptService.GenerateReceipt(
                     _workflowService.CurrentFlow,
                     _workflowService.SelectedHostName,
                     _workflowService.SelectedPurpose,
                     isArabic
                 );
-
-               
 
                 if (isArabic)
                 {
@@ -254,8 +254,13 @@ namespace AIN_Kiosk
                 BtnAcceptPrint.Background = Brushes.DarkRed;
                 BtnAcceptPrint.Content = isArabic ? "العودة للقائمة الرئيسية" : "Return to Home";
                 QrCodeContainer.Visibility = Visibility.Visible;
+
                 PrintStatusLabel.Foreground = Brushes.Red;
-                PrintStatusLabel.Text = isArabic ? "⚠️ عذراً، محاكاة طابعة البطاقات غير متوفرة حالياً (Printer fallback demo)!" : "⚠️ Printer fallback demo: printer is offline!";
+
+                string printerErrorMsg = _localizationService.GetText("PrinterOfflineErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(printerErrorMsg)) printerErrorMsg = isArabic ? "⚠️ عذراً، محاكاة طابعة البطاقات غير متوفرة حالياً (Printer fallback demo)!" : "⚠️ Printer fallback demo: printer is offline!";
+                PrintStatusLabel.Text = printerErrorMsg;
+
                 _workflowService.ResetIdleTimer();
             }
         }
@@ -265,17 +270,20 @@ namespace AIN_Kiosk
             ResetToHomeView(forceResetToArabic: true);
         }
 
-        //  ميكانيكية إعادة الضبط الشاملة 
+        // Restores primary navigation boundaries and clears captured buffer variables
         private void ResetToHomeView(bool forceResetToArabic = false)
         {
             ViewPrivacy.Visibility = Visibility.Collapsed;
             ViewScan.Visibility = Visibility.Collapsed;
             ViewDetails.Visibility = Visibility.Collapsed;
             ViewRetroactive.Visibility = Visibility.Collapsed;
+            ViewSupervisorAuth.Visibility = Visibility.Collapsed;
+            ViewSupervisorConsole.Visibility = Visibility.Collapsed;
+
             ViewHome.Visibility = Visibility.Visible;
 
             BtnAcceptPrint.IsEnabled = true;
-            PrintStatusLabel.Text = "";
+            PrintStatusLabel.Text = string.Empty;
             QrCodeContainer.Visibility = Visibility.Collapsed;
             BorderReceptionistAlert.Visibility = Visibility.Collapsed;
             ScrollPrivacyText.Visibility = Visibility.Visible;
@@ -283,8 +291,9 @@ namespace AIN_Kiosk
             PanelReceiptDetails.Visibility = Visibility.Collapsed;
             BtnDoneReceipt.Visibility = Visibility.Collapsed;
 
-            TxtHostName.Text = "";
-            TxtMobileNumber.Text = "";
+            TxtHostName.Text = string.Empty;
+            TxtMobileNumber.Text = string.Empty;
+            TxtSupervisorPin.Password = string.Empty;
             if (TxtEmail != null) TxtEmail.Text = "wessamaltabaa@gmail.com";
 
             if (forceResetToArabic) isArabic = true;
@@ -334,26 +343,28 @@ namespace AIN_Kiosk
             }
         }
 
-        //  أزرار التحكم والوصول الآمن لبيانات الويب 
         private void BtnViewPersonalData_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(
-                isArabic ? "[محاكاة - الالتزام بالنظام معلق]\n\nسيتم توجيهك بأمان إلى بوابة الويب التابعة لـ (عين) للتحقق من هويتك عبر الـ OTP واستعراض بياناتك بشكل محمي."
-                         : "[Simulated - Backend integration pending]\n\nRedirecting to the secure web portal for identity verification via OTP to review personal data.",
-                "AIN Kiosk - Privacy Portal", MessageBoxButton.OK, MessageBoxImage.Information
-            );
+            string validationTitle = _localizationService.GetText("PrivacyPortalAlertTitle", isArabic);
+            if (string.IsNullOrWhiteSpace(validationTitle)) validationTitle = isArabic ? "بوابة الخصوصية" : "Privacy Portal";
+
+            string portalMsg = _localizationService.GetText("PrivacyPortalRedirectMsg", isArabic);
+            if (string.IsNullOrWhiteSpace(portalMsg)) portalMsg = isArabic ? "[محاكاة - الالتزام بالنظام معلق]\n\nسيتم توجيهك بأمان إلى بوابة الويب التابعة لـ (عين) للتحقق من هويتك عبر الـ OTP واستعراض بياناتك بشكل محمي." : "[Simulated - Backend integration pending]\n\nRedirecting to the secure web portal for identity verification via OTP to review personal data.";
+
+            MessageBox.Show(portalMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void BtnExercisePrivacyRights_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(
-                isArabic ? "[محاكاة - الالتزام بالنظام معلق]\n\nسيتم توجيهك إلى بوابة حقوق حماية البيانات لتقديم طلب رسمي ومتابعته."
-                         : "[Simulated - Backend integration pending]\n\nRedirecting to the data protection portal to exercise your rights.",
-                "AIN Kiosk - Privacy Rights Portal", MessageBoxButton.OK, MessageBoxImage.Information
-            );
+            string validationTitle = _localizationService.GetText("PrivacyPortalAlertTitle", isArabic);
+            if (string.IsNullOrWhiteSpace(validationTitle)) validationTitle = isArabic ? "بوابة الحقوق" : "Privacy Rights";
+
+            string rightsMsg = _localizationService.GetText("PrivacyRightsRedirectMsg", isArabic);
+            if (string.IsNullOrWhiteSpace(rightsMsg)) rightsMsg = isArabic ? "[محاكاة - الالتزام بالنظام معلق]\n\nسيتم توجيهك إلى بوابة حقوق حماية البيانات لتقديم طلب رسمي ومتابعته." : "[Simulated - Backend integration pending]\n\nRedirecting to the data protection portal to exercise your rights.";
+
+            MessageBox.Show(rightsMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        //  دالة لوحة المفاتيح والتركيز التلقائي 
         private void KioskTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
             try
@@ -366,16 +377,21 @@ namespace AIN_Kiosk
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Touch Keyboard Error] Failed to initialize OS keyboard utility: {ex.Message}");
+                Debug.WriteLine($"[Touch Keyboard Fault] OS interaction layout block: {ex.Message}");
             }
         }
 
-        // التحقق وصياغة  QR المحلي الخالي من الـ PII
         private void BtnNextToPrivacy_Click(object sender, RoutedEventArgs e)
         {
+            string validationTitle = _localizationService.GetText("KioskAlertTitle", isArabic);
+            if (string.IsNullOrWhiteSpace(validationTitle)) validationTitle = isArabic ? "تحقق المدخلات" : "Input Validation";
+
             if (string.IsNullOrWhiteSpace(TxtHostName.Text))
             {
-                MessageBox.Show(isArabic ? "يرجى كتابة اسم الشخص المضيف أولاً!" : "Please enter the host name!", "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning);
+                string missingHostMsg = _localizationService.GetText("MissingHostErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(missingHostMsg)) missingHostMsg = isArabic ? "يرجى كتابة اسم الشخص المضيف أولاً!" : "Please enter the host name!";
+
+                MessageBox.Show(missingHostMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -389,11 +405,10 @@ namespace AIN_Kiosk
                 }
                 catch
                 {
-                    MessageBox.Show(
-                        isArabic ? "⚠️ صيغة البريد الإلكتروني غير صحيحة، يرجى التأكد منها لتسهيل عملية إرسال الـ OTP لاحقاً!"
-                                 : "⚠️ Invalid email format. Please check the email address to facilitate future OTP delivery!",
-                        "AIN Kiosk - Validation", MessageBoxButton.OK, MessageBoxImage.Warning
-                    );
+                    string invalidEmailMsg = _localizationService.GetText("InvalidEmailFormatErrorMsg", isArabic);
+                    if (string.IsNullOrWhiteSpace(invalidEmailMsg)) invalidEmailMsg = isArabic ? "⚠️ صيغة البريد الإلكتروني غير صحيحة، يرجى التأكد منها لتسهيل عملية إرسال الـ OTP لاحقاً!" : "⚠️ Invalid email format. Please check the email address to facilitate future OTP delivery!";
+
+                    MessageBox.Show(invalidEmailMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
             }
@@ -403,22 +418,18 @@ namespace AIN_Kiosk
 
             try
             {
-                // إنشاء توكن عشوائي مبهم وتخزينه في الجلسة 
                 _receiptToken = _receiptReferenceProvider.GetSyntheticToken();
-
-                // بناء الرابط النظيف بعد استهلاك التوكن
                 string localQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
-                // التوليد المحلي الصارم بدون إنترنت
                 KioskQrImage.Source = _qrCodeService.GenerateQrCodeImage(localQrPayload);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[QR Engine Error] Local generation failed on render stage: {ex.Message}");
-                MessageBox.Show(
-                    isArabic ? "⚠️ عذراً، فشل نظام الكشك في إنشاء الرمز المربع محلياً، سيتم الاستمرار بدون عرض الـ QR."
-                             : "⚠️ Local QR code generation failed. Continuing checkout without QR code.",
-                    "AIN Kiosk", MessageBoxButton.OK, MessageBoxImage.Warning
-                );
+                Debug.WriteLine($"[QR Engine Error] Local QR bitmap compilation exception: {ex.Message}");
+
+                string qrErrorMsg = _localizationService.GetText("LocalQrGenerationErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(qrErrorMsg)) qrErrorMsg = isArabic ? "⚠️ عذراً، فشل نظام الكشك في إنشاء الرمز المربع محلياً، سيتم الاستمرار بدون عرض الـ QR." : "⚠️ Local QR code generation failed. Continuing checkout without QR code.";
+
+                MessageBox.Show(qrErrorMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
             ViewDetails.Visibility = Visibility.Collapsed;
@@ -426,23 +437,82 @@ namespace AIN_Kiosk
             ApplyLanguage();
         }
 
-        // محرك الترجمة واستبدال الرموز النائبة ديناميكياً 
+        private void BtnSupervisorTrigger_Click(object sender, RoutedEventArgs e)
+        {
+            ViewHome.Visibility = Visibility.Collapsed;
+            ViewScan.Visibility = Visibility.Collapsed;
+            ViewDetails.Visibility = Visibility.Collapsed;
+            ViewPrivacy.Visibility = Visibility.Collapsed;
+            ViewRetroactive.Visibility = Visibility.Collapsed;
+            ViewSupervisorConsole.Visibility = Visibility.Collapsed;
+
+            ViewSupervisorAuth.Visibility = Visibility.Visible;
+            TxtSupervisorPin.Focus();
+        }
+
+        private void BtnSubmitPin_Click(object sender, RoutedEventArgs e)
+        {
+            if (TxtSupervisorPin.Password == SupervisorPinCode)
+            {
+                ViewSupervisorAuth.Visibility = Visibility.Collapsed;
+                ViewSupervisorConsole.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                string errorTitle = _localizationService.GetText("KioskAlertTitle", isArabic);
+                if (string.IsNullOrWhiteSpace(errorTitle)) errorTitle = isArabic ? "خطأ في الصلاحية" : "Authorization Fault";
+
+                string errorMsg = _localizationService.GetText("InvalidSupervisorPinErrorMsg", isArabic);
+                if (string.IsNullOrWhiteSpace(errorMsg)) errorMsg = isArabic ? "رمز الأمان المدخل غير صحيح!" : "Invalid supervisor PIN code entered!";
+
+                MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                TxtSupervisorPin.Password = string.Empty;
+            }
+        }
+
+        private void BtnCancelPin_Click(object sender, RoutedEventArgs e)
+        {
+            ResetToHomeView(forceResetToArabic: true);
+        }
+
+        private void BtnExitConsole_Click(object sender, RoutedEventArgs e)
+        {
+            ResetToHomeView(forceResetToArabic: true);
+        }
+
         private void ApplyLanguage()
         {
             if (_workflowService == null || _localizationService == null || _configProvider == null || _privacyNoticeProvider == null) return;
 
             KioskWindow.FlowDirection = isArabic ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
 
-            //  إزالة علامة الاستفهام (?) لحظر تحذيرات المترجم حول  Nullability
             string langText = _localizationService.GetText("BtnLangToggle", !isArabic);
             BtnLangToggle.Content = string.IsNullOrEmpty(langText) ? (isArabic ? "English" : "العربية") : langText;
 
+            TxtHeaderLogo.Text = isArabic ? "عـيـن | AIN" : "AIN | EYE";
             WelcomeTitle.Text = _localizationService.GetText("WelcomeTitle", isArabic);
             WelcomeSubtitle.Text = _localizationService.GetText("WelcomeSubtitle", isArabic);
             BtnPreRegistered.Content = _localizationService.GetText("BtnPreRegistered", isArabic);
             BtnWalkIn.Content = _localizationService.GetText("BtnWalkIn", isArabic);
-            BtnRetroactive.Content = _localizationService.GetText("BtnRetroactive", isArabic);
             BtnHelp.Content = _localizationService.GetText("BtnHelp", isArabic);
+
+            TxtSupervisorTitle.Text = isArabic ? "بوابة المشرف الأمنية" : "Supervisor Security Gateway";
+            TxtSupervisorSubtitle.Text = isArabic ? "الرجاء إدخال رمز التحقق لتفويض الصلاحيات" : "Please enter authentication code to authorize access";
+            BtnSubmitPin.Content = isArabic ? "تحقق" : "Verify";
+            BtnCancelPin.Content = isArabic ? "إلغاء" : "Cancel";
+
+            TxtConsoleTitle.Text = isArabic ? "لوحة تحكم المشرف والعمليات الاستثنائية" : "Supervisor Console & Exceptional Actions";
+            BtnRetroactiveEntry.Content = isArabic ? "تسجيل زائر بأثر رجعي" : "Retroactive Visitor Logging";
+            BtnExitConsole.Content = isArabic ? "خروج العودة للرئيسية" : "Exit and Return Home";
+
+            TxtHostName.Tag = isArabic ? "أدخل اسم الموظف المستضيف هنا" : "Enter host employee name here";
+            TxtMobileNumber.Tag = isArabic ? "مثال: 05XXXXXXXX" : "Example: 05XXXXXXXX";
+            TxtEmail.Tag = isArabic ? "مثال: user@domain.com" : "Example: user@domain.com";
+
+            TxtRetroVisitorName.Tag = isArabic ? "أدخل اسم الزائر الكامل" : "Enter visitor full name";
+            TxtRetroDocNumber.Tag = isArabic ? "رقم الهوية أو جواز السفر" : "National ID or Passport number";
+            TxtRetroHostName.Tag = isArabic ? "اسم الموظف المستضيف" : "Host employee name";
+            TxtRetroPurpose.Tag = isArabic ? "اكتب الغرض الفعلي من الزيارة" : "Type actual visit purpose";
 
             ScanTitle.Text = _workflowService.CurrentFlow == "WalkIn"
                 ? _localizationService.GetText("ScanTitleWalkIn", isArabic)
@@ -454,6 +524,7 @@ namespace AIN_Kiosk
             LblHostName.Text = _localizationService.GetText("LblHostName", isArabic);
             LblPurpose.Text = _localizationService.GetText("LblPurpose", isArabic);
             LblMobile.Text = _localizationService.GetText("LblMobile", isArabic);
+            LblEmail.Text = isArabic ? "البريد الإلكتروني - اختياري:" : "Email Address - Optional:";
             ChipMeeting.Content = _localizationService.GetText("ChipMeeting", isArabic);
             ChipInterview.Content = _localizationService.GetText("ChipInterview", isArabic);
             ChipMaintenance.Content = _localizationService.GetText("ChipMaintenance", isArabic);
@@ -466,23 +537,19 @@ namespace AIN_Kiosk
             if (!_workflowService.IsInErrorState) BtnAcceptPrint.Content = _localizationService.GetText("BtnAcceptPrint", isArabic);
             BtnDoneReceipt.Content = _localizationService.GetText("BtnDoneReceipt", isArabic);
 
-            TxtRetroTitle.Text = _localizationService.GetText("TxtRetroTitle", isArabic);
+            TxtRetroTitle.Text = isArabic ? "تسجيل زائر بأثر رجعي" : "Retroactive Entry";
             TxtRetroWarning.Text = _localizationService.GetText("TxtRetroWarning", isArabic);
             LblRetroVisName.Text = _localizationService.GetText("LblRetroVisName", isArabic);
             LblRetroDocNum.Text = _localizationService.GetText("LblRetroDocNum", isArabic);
             LblRetroHost.Text = _localizationService.GetText("LblRetroHost", isArabic);
             LblRetroPurpose.Text = _localizationService.GetText("LblRetroPurpose", isArabic);
-
-            //  تصحيح اسم العنصر البرمجي لمطابقة  XAML
             ChkRetroAttestation.Content = _localizationService.GetText("ChkRetroAttestation", isArabic);
-
             BtnSubmitRetroactive.Content = _localizationService.GetText("BtnSubmitRetroactive", isArabic);
             BtnCancelRetroactive.Content = _localizationService.GetText("BtnCancelRetroactive", isArabic);
 
             if (_workflowService.CurrentFlow == "WalkIn")
             {
                 PrivacyTitle.Text = _localizationService.GetText("PrivacyTitleWalkIn", isArabic);
-
                 string rawBody = _localizationService.GetText("PrivacyBodyWalkIn", isArabic);
                 PrivacyBody.Text = rawBody
                     .Replace("[TenantName]", _configProvider.TenantName)
@@ -492,7 +559,6 @@ namespace AIN_Kiosk
             else
             {
                 PrivacyTitle.Text = _localizationService.GetText("PrivacyTitleDefault", isArabic);
-
                 string rawBody = _localizationService.GetText("PrivacyBodyDefault", isArabic);
                 PrivacyBody.Text = rawBody
                     .Replace("[TenantName]", _configProvider.TenantName)
