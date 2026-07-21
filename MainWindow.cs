@@ -476,7 +476,12 @@ namespace AIN_Kiosk
             _workflowService.SelectedMobile = string.IsNullOrWhiteSpace(TxtMobileNumber.Text) ? (isArabic ? "غير مسجل" : "Not Provided") : TxtMobileNumber.Text.Trim();
 
             _receiptToken = Guid.NewGuid().ToString("N").ToUpperInvariant();
-            string localQrPayload = $"AIN|VERSION=1|TOKEN={_receiptToken}|FLOW={_workflowService.CurrentFlow}";
+
+            // 1. إنشاء التوكن التجريبي المباشر
+            _receiptToken = Guid.NewGuid().ToString("N").ToUpperInvariant();
+
+            // 2. الصيغة المعتمدة نهائياً حسب الإيميل الرابع (رابط استعراض الإيصال)
+            string localQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
 
             try
             {
@@ -484,11 +489,13 @@ namespace AIN_Kiosk
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Local QR generation failed: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Local QR generation failed: {ex.Message}");
                 KioskQrImage.Source = null;
 
                 MessageBox.Show(
-                    isArabic ? "تعذر إنشاء رمز الاستجابة السريعة محلياً." : "The QR code could not be generated locally.",
+                    isArabic
+                        ? "تعذر إنشاء رمز الاستجابة السريعة محلياً."
+                        : "The QR code could not be generated locally.",
                     "AIN Kiosk",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
