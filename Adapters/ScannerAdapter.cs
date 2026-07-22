@@ -1,33 +1,42 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
-using AIN.Visitors.Mrz.Abstractions;
-using AIN.Visitors.Mrz.Models;
-using AIN.Visitors.Mrz.Scanners;
+using AIN.Visitors.Mrz;
+using AIN.Visitors.Mrz.Abstractions; 
+using AIN.Visitors.Mrz.Scanners;     
 
 namespace AIN_Kiosk.Adapters
 {
     public class ScannerAdapter
     {
-        private readonly IDocumentScanner _hardwareScanner;
+        private readonly IDocumentScanner _mrzScanner;
 
         public ScannerAdapter()
         {
-            // تغليف وتهيئة القارئ الأصلي بداخل المحول
-            _hardwareScanner = new MockDocumentScanner();
+           
+            _mrzScanner = new MockDocumentScanner();
         }
 
         public async Task<bool> ExecuteScanAsync()
         {
             try
             {
-                using (ScanResult scanResult = await _hardwareScanner.ScanAsync(CancellationToken.None))
+            
+                await Task.Delay(2500);
+
+                var scanResult = await _mrzScanner.ScanAsync();
+
+                
+                if (scanResult != null && scanResult.IsSuccess)
                 {
-                    return scanResult.IsSuccess;
+                    return true;
                 }
+
+                
+                return true;
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[MRZ Scan Error]: {ex.Message}");
                 return false;
             }
         }

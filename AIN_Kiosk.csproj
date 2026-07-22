@@ -26,6 +26,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
+	  <ProjectReference Include="..\AIN.Visitors.Mrz-main\AIN.Visitors.Mrz-main\AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
 	</ItemGroup>
 </Project>
