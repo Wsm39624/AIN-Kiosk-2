@@ -146,6 +146,7 @@ namespace AIN_Kiosk
         {
             if (_workflowService.IsInErrorState)
             {
+
                 ResetToHomeView(forceResetToArabic: true);
                 return;
             }
