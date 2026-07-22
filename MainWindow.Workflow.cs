@@ -33,6 +33,7 @@ namespace AIN_Kiosk
             bool isScanValid = false;
             try
             {
+                // Execute scan adapter operation (handles mock/simulated scanner hardware)
                 isScanValid = await _scannerAdapter.ExecuteScanAsync();
             }
             catch (Exception ex)
@@ -46,32 +47,29 @@ namespace AIN_Kiosk
                 MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
+            ViewScan.Visibility = Visibility.Collapsed;
+
             if (isScanValid)
             {
-                ViewScan.Visibility = Visibility.Collapsed;
+                // Successful scan path: skip manual data entry and navigate directly to badge printing/terms view
+                _workflowService.SelectedHostName = isArabic ? "قيد التدقيق" : "Pending Queue";
+                _workflowService.SelectedPurpose = _workflowService.CurrentFlow == "WalkIn"
+                    ? (isArabic ? "زيارة بدون موعد" : "Walk-In Guest")
+                    : (isArabic ? "زيارة مسجلة" : "Pre-Registered Visit");
+                _workflowService.SelectedMobile = isArabic ? "مسجل آلياً" : "Auto-Extracted";
 
-                if (_workflowService.CurrentFlow == "WalkIn")
-                {
-                    _workflowService.SelectedHostName = isArabic ? "قيد التدقيق" : "Pending Queue";
-                    _workflowService.SelectedPurpose = isArabic ? "زيارة بدون موعد" : "Walk-In Guest";
-                    _workflowService.SelectedMobile = isArabic ? "غير مسجل" : "Not Provided";
-
-                    ViewPrivacy.Visibility = Visibility.Visible;
-                    ApplyLanguage();
-                }
-                else
-                {
-                    TxtHostName.Text = string.Empty;
-                    TxtMobileNumber.Text = string.Empty;
-                    if (TxtEmail != null) TxtEmail.Text = string.Empty;
-
-                    ViewDetails.Visibility = Visibility.Visible;
-                    ApplyLanguage();
-                }
+                ViewPrivacy.Visibility = Visibility.Visible;
+                ApplyLanguage();
             }
             else
             {
-                ResetToHomeView(forceResetToArabic: true);
+                // Fallback path: scanner offline/failed; redirect user to manual data entry view
+                TxtHostName.Text = string.Empty;
+                TxtMobileNumber.Text = string.Empty;
+                if (TxtEmail != null) TxtEmail.Text = string.Empty;
+
+                ViewDetails.Visibility = Visibility.Visible;
+                ApplyLanguage();
             }
         }
 
@@ -146,7 +144,6 @@ namespace AIN_Kiosk
         {
             if (_workflowService.IsInErrorState)
             {
-
                 ResetToHomeView(forceResetToArabic: true);
                 return;
             }
