@@ -316,7 +316,7 @@ HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
                 <Button x:Name="BtnWalkIn" Content="زائر بدون موعد" Background="#0D6EFD" Style="{StaticResource KioskButtonStyle}" Click="BtnWalkIn_Click"/>
 
-                <Button x:Name="BtnHelp" Content="مساعدة" Background="#198754" Style="{StaticResource KioskButtonStyle}"/>
+                <Button x:Name="BtnHelp" Content="مساعدة" Background="#198754" Style="{StaticResource KioskButtonStyle}" Click="BtnHelp_Click"/>
 
             </StackPanel>
 

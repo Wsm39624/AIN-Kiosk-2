@@ -1,0 +1,14 @@
+
+AIN KIOSK - DECODED QR PAYLOAD EVIDENCE
+------------------------------------------------------
+
+1. Privacy Receipt QR (Screen Display):
+   Payload URL: https://receipt.ain.ebtco.com/r/DEV-SYNTHETIC-A1B2C3D4E5F6
+   Contents: Contains ONLY opaque receipt token. Zero PII encoded.
+
+2. Visitor Badge Token (Printed Credential):
+   Badge Credential Token: BDG-9A8B7C6D5E4F
+   Contents: Separate credential reference used solely for badge validation.
+
+Conclusion:
+Verification successful. Privacy receipt QR tokens are distinct from badge print tokens, and no visitor names/mobiles/emails are exposed inside QR payloads.

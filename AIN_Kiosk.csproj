@@ -17,6 +17,12 @@
 		<PackageReference Include="Syncfusion.Shared.WPF" Version="34.1.29" />
 		<PackageReference Include="xunit" Version="2.9.0" />
 	</ItemGroup>
+	
+	<ItemGroup>
+		<Compile Remove="Tests\**" />
+		<EmbeddedResource Remove="Tests\**" />
+		<None Remove="Tests\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<Compile Remove="AIN.Visitors.Mrz\**" />
@@ -26,6 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\AIN.Visitors.Mrz-main\AIN.Visitors.Mrz-main\AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
+		
+		<ProjectReference Include="AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
 	</ItemGroup>
 </Project>

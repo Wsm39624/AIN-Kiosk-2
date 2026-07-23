@@ -32,7 +32,7 @@ namespace AIN_Kiosk
                     : Visibility.Collapsed;
             }
 
-            TxtSupervisorTitle.Text = isArabic ? "بوابة المشرف الأمنية (زر تجريبي)" : "Supervisor Security Gateway (Demo Button)";
+            TxtSupervisorTitle.Text = isArabic ? "بوابة المشرف [إعدادات تطويرية]" : "Supervisor Gate [Dev Settings]";
             TxtSupervisorSubtitle.Text = isArabic ? "الرجاء إدخال رمز التحقق لتفويض الصلاحيات" : "Please enter authentication code to authorize access";
             BtnSubmitPin.Content = isArabic ? "تحقق" : "Verify";
             BtnCancelPin.Content = isArabic ? "إلغاء" : "Cancel";
@@ -46,7 +46,9 @@ namespace AIN_Kiosk
             TxtEmail.Tag = isArabic ? "مثال: user@domain.com" : "Example: user@domain.com";
 
             TxtRetroVisitorName.Tag = isArabic ? "أدخل اسم الزائر الكامل" : "Enter visitor full name";
-            TxtRetroDocNumber.Tag = isArabic ? "رقم الهوية أو جواز السفر (10 أرقام)" : "National ID or Passport (10 digits)";
+
+            // Task #10: Removed rigid "10 digits" label restriction
+            TxtRetroDocNumber.Tag = isArabic ? "رقم الهوية الوطنية أو جواز السفر" : "National ID or Passport Document Number";
             TxtRetroHostName.Tag = isArabic ? "اسم الموظف المستضيف" : "Host employee name";
             TxtRetroPurpose.Tag = isArabic ? "اكتب الغرض الفعلي من الزيارة" : "Type actual visit purpose";
 
@@ -60,7 +62,10 @@ namespace AIN_Kiosk
             LblHostName.Text = _localizationService.GetText("LblHostName", isArabic);
             LblPurpose.Text = _localizationService.GetText("LblPurpose", isArabic);
             LblMobile.Text = _localizationService.GetText("LblMobile", isArabic);
-            LblEmail.Text = isArabic ? "البريد الإلكتروني - اختياري:" : "Email Address - Optional:";
+
+            // Task #9: Configurable email handling (Default approved state requires email for digital receipt)
+            LblEmail.Text = isArabic ? "البريد الإلكتروني (مطلوب للإيصال الرقمي):" : "Email Address (Required for Digital Receipt):";
+
             ChipMeeting.Content = _localizationService.GetText("ChipMeeting", isArabic);
             ChipInterview.Content = _localizationService.GetText("ChipInterview", isArabic);
             ChipMaintenance.Content = _localizationService.GetText("ChipMaintenance", isArabic);
@@ -83,15 +88,27 @@ namespace AIN_Kiosk
             BtnSubmitRetroactive.Content = isArabic ? "تأكيد وحفظ السجل بأثر رجعي" : "Confirm & Save Retroactive Record";
             BtnCancelRetroactive.Content = isArabic ? "إلغاء والعودة للرئيسية" : "Cancel & Return Home";
 
-            PrivacyTitle.Text = isArabic ? "إقرار سياسة الخصوصية الفوري" : "One-Click Privacy Consent";
+            // Task #8: Removed misleading hardcoded claims ("One-Click Privacy Consent", "PDPL Compliant", etc.)
+            PrivacyTitle.Text = isArabic ? "إشعار الخصوصية وشروط معالجة البيانات" : "Privacy Notice & Data Processing Terms";
             PrivacyBody.Text = isArabic
-                ? "يتعهد نظام (عين) لحلول الزوار بمعالجة بياناتك الشخصية وفقاً لسياسات الخصوصية والأنظمة المعمول بها. بضغطك على زر أوافق، فإنك تمنح النظام صلاحية معالجة هذه البيانات بشكل آمن ومؤقت لاستخراج بطاقة الزائر."
-                : "AIN Visitors System is committed to processing your personal data in accordance with applicable privacy policies and regulations. By clicking Agree, you authorize the system to process this data securely and temporarily to issue your visitor badge.";
+                ? $"تلتزم جهة ({_configProvider.TenantName}) بمعالجة بيانات الزوار وفقاً للأطر التنظيمية المعمول بها وبناءً على شروط الخدمة المعتمدة. تشمل المعالجة طباعة بطاقة الزائر وإشعار المستضيف."
+                : $"({_configProvider.TenantName}) is committed to processing visitor data in accordance with effective regulatory frameworks and tenant-approved terms. Processing includes printing visitor credentials and host notification.";
 
             if (PanelReceiptDetails.Visibility == Visibility.Visible)
             {
                 UpdateReceiptLanguageTexts();
             }
+        }
+
+        // Task #11: Implemented Help Button action
+        private void BtnHelp_Click(object sender, RoutedEventArgs e)
+        {
+            string helpTitle = isArabic ? "تعليمات استخدام جهاز الخدمة الذاتية" : "Kiosk Help & Instructions";
+            string helpMessage = isArabic
+                ? "أهلاً بك!\n\n1. اختر 'زائر مسجل' إذا كان لديك موعد مسبق، أو 'زائر بدون موعد'.\n2. قم بمسح بطاقة الهوية/جواز السفر عند طلب القارئ.\n3. استكمل بيانات المستضيف لطباعة بطاقة الدخول واستلام الإيصال الرقمي."
+                : "Welcome!\n\n1. Select 'Pre-Registered' if you have an appointment, or 'Walk-In'.\n2. Scan your National ID or Passport when prompted.\n3. Complete host details to print your visitor badge and receive a digital receipt.";
+
+            MessageBox.Show(helpMessage, helpTitle, MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void UpdateReceiptLanguageTexts()
@@ -147,8 +164,8 @@ namespace AIN_Kiosk
                     : $"[معاينة محاكاة - لم يُرسل] تنبيه الاستقبال: الزائر بانتظار المضيف ({host}).";
 
                 TxtReceiptDataCaptured.Text = $"• [معاينة إيصال] الجهة: {_configProvider.TenantName}\n• المضيف: {host}\n• الغرض: {purpose}";
-                TxtReceiptPurgeDate.Text = $"الأساس القانوني: نظام حماية البيانات الشخصية \nفترة الاحتفاظ المحددة: {_privacyNoticeProvider.GetRetentionStatement(true)}";
-                TxtReceiptHash.Text = $"رمز الوصول المرجعي المباشر: {_receiptToken}";
+                TxtReceiptPurgeDate.Text = $"سياسة الاحتفاظ المعتمدة: {_privacyNoticeProvider.GetRetentionStatement(true)}";
+                TxtReceiptHash.Text = $"مرجع الإيصال الرقمي: {_receiptToken}";
             }
             else
             {
@@ -159,15 +176,15 @@ namespace AIN_Kiosk
                     : $"[Simulated Preview - Not Sent] Receptionist alert: Visitor waiting for Host ({host}).";
 
                 TxtReceiptDataCaptured.Text = $"• [Receipt Preview] Org: {_configProvider.TenantName}\n• Host: {host}\n• Purpose: {purpose}";
-                TxtReceiptPurgeDate.Text = $"Legal Basis: Personal Data Protection Law (PDPL)\nRetention Period: {_privacyNoticeProvider.GetRetentionStatement(false)}";
-                TxtReceiptHash.Text = $"Opaque Token Reference: {_receiptToken}";
+                TxtReceiptPurgeDate.Text = $"Effective Retention Policy: {_privacyNoticeProvider.GetRetentionStatement(false)}";
+                TxtReceiptHash.Text = $"Digital Receipt Reference: {_receiptToken}";
             }
 
             if (TxtPrivacyPortalInstruction != null)
             {
                 TxtPrivacyPortalInstruction.Text = isArabic
-                    ? "لطلب استعراض البيانات الشخصية أو ممارسة حقوق الخصوصية، يرجى مسح رمز الـ QR أعلاه بجوالك للانتقال المباشر إلى بوابة الويب الآمنة (تتطلب تحقق OTP)."
-                    : "To view personal data or exercise privacy rights, please scan the QR code above with your mobile device to access the secure web portal (requires OTP verification).";
+                    ? "لطلب استعراض البيانات الشخصية أو ممارسة حقوق الخصوصية، يرجى مسح رمز الـ QR أعلاه بجوالك للانتقال المباشر إلى بوابة الويب الآمنة."
+                    : "To view personal data or exercise privacy rights, please scan the QR code above with your mobile device to access the secure web portal.";
             }
         }
     }

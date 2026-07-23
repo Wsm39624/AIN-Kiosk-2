@@ -8,6 +8,8 @@ namespace AIN_Kiosk
 {
     public partial class MainWindow
     {
+        private string _badgeToken = string.Empty;
+
         private async void BtnWalkIn_Click(object sender, RoutedEventArgs e)
         {
             _workflowService.CurrentFlow = "WalkIn";
@@ -47,23 +49,21 @@ namespace AIN_Kiosk
                 MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            ViewScan.Visibility = Visibility.Collapsed;
-
             if (isScanValid)
             {
-                // Successful scan path: skip manual data entry and navigate directly to badge printing/terms view
+                // Task #6: Successful scan path populates auto-extracted parameters and passes through receipt step
                 _workflowService.SelectedHostName = isArabic ? "قيد التدقيق" : "Pending Queue";
                 _workflowService.SelectedPurpose = _workflowService.CurrentFlow == "WalkIn"
                     ? (isArabic ? "زيارة بدون موعد" : "Walk-In Guest")
                     : (isArabic ? "زيارة مسجلة" : "Pre-Registered Visit");
                 _workflowService.SelectedMobile = isArabic ? "مسجل آلياً" : "Auto-Extracted";
 
-                ViewPrivacy.Visibility = Visibility.Visible;
-                ApplyLanguage();
+                PrepareReceiptAndPrivacyStep();
             }
             else
             {
                 // Fallback path: scanner offline/failed; redirect user to manual data entry view
+                ViewScan.Visibility = Visibility.Collapsed;
                 TxtHostName.Text = string.Empty;
                 TxtMobileNumber.Text = string.Empty;
                 if (TxtEmail != null) TxtEmail.Text = string.Empty;
@@ -112,14 +112,30 @@ namespace AIN_Kiosk
             }
 
             _workflowService.SelectedHostName = TxtHostName.Text.Trim();
-            _workflowService.SelectedMobile = string.IsNullOrWhiteSpace(TxtMobileNumber.Text) ? (isArabic ? "غير مسجل" : "Not Provided") : TxtMobileNumber.Text.Trim();
+            _workflowService.SelectedMobile = string.IsNullOrWhiteSpace(TxtMobileNumber.Text)
+                ? (isArabic ? "غير مسجل" : "Not Provided")
+                : TxtMobileNumber.Text.Trim();
 
-            _receiptToken = Guid.NewGuid().ToString("N").ToUpperInvariant();
-            string localQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
+            // Task #6: Unified transition step for manual data entry path
+            PrepareReceiptAndPrivacyStep();
+        }
+
+        /// <summary>
+        /// Unified pipeline step creating distinct badge/receipt references and loading privacy view.
+        /// Fixes Task #4, Task #5, and Task #6 compliance requirements.
+        /// </summary>
+        private void PrepareReceiptAndPrivacyStep()
+        {
+            // Task #5: Invoke IReceiptReferenceProvider (GetSyntheticToken) rather than generating raw GUIDs directly in UI
+            _receiptToken = _receiptReferenceProvider.GetSyntheticToken();
+            string localReceiptQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
+
+            // Task #4: Generate distinct dedicated badge credential token (never printed as privacy receipt token)
+            _badgeToken = $"BDG-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
             try
             {
-                KioskQrImage.Source = _qrCodeService.GenerateBitmap(localQrPayload);
+                KioskQrImage.Source = _qrCodeService.GenerateBitmap(localReceiptQrPayload);
             }
             catch (Exception ex)
             {
@@ -135,6 +151,7 @@ namespace AIN_Kiosk
                     MessageBoxImage.Warning);
             }
 
+            ViewScan.Visibility = Visibility.Collapsed;
             ViewDetails.Visibility = Visibility.Collapsed;
             ViewPrivacy.Visibility = Visibility.Visible;
             ApplyLanguage();
@@ -154,11 +171,12 @@ namespace AIN_Kiosk
             PrintStatusLabel.Foreground = Brushes.DarkBlue;
             PrintStatusLabel.Text = isArabic ? "[محاكاة] جاري معالجة طباعة البطاقة..." : "[Simulation] Processing badge print...";
 
+            // Task #4: Pass dedicated _badgeToken to print service (separate from receipt token)
             bool isPrintSuccess = await _printService.PrintVisitorBadgeAsync(
                 _workflowService.SelectedHostName,
                 _workflowService.SelectedPurpose,
                 _workflowService.SelectedMobile,
-                _receiptToken
+                _badgeToken
             );
 
             if (isPrintSuccess)

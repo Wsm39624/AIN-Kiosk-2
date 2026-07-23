@@ -2,6 +2,9 @@
   <Folder Name="/Solution Items/">
     <File Path="README.md" />
   </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/AIN_Kiosk.Tests.csproj" />
+  </Folder>
   <Project Path="../AIN.Visitors.Mrz-main/AIN.Visitors.Mrz-main/AIN.Visitors.Mrz/AIN.Visitors.Mrz.csproj" />
   <Project Path="AIN_Kiosk.csproj" />
 </Solution>

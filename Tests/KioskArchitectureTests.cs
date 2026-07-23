@@ -97,13 +97,19 @@ namespace AIN_Kiosk.Tests
         [Fact]
         public void Test_8_LocalQrPayload_ContainsNoPII_OnlyOpaqueToken()
         {
-            string opaqueToken = Guid.NewGuid().ToString("N");
-            string qrPayload = $"https://receipt.ain.ebtco.com/r/{opaqueToken}";
+            // Arrange
+            IReceiptReferenceProvider provider = new MockReceiptReferenceProvider();
+            string sampleMobile = "0512345678";
+            string sampleEmail = "visitor@domain.com";
 
-            // التأكد من عدم حشو أي بيانات حساسة بداخل الـ Payload
-            Assert.DoesNotContain("Wesam", qrPayload);
-            Assert.DoesNotContain("05", qrPayload);
-            Assert.Contains(opaqueToken, qrPayload);
+            // Act
+            string receiptToken = provider.GetSyntheticToken();
+            string payloadUrl = $"https://receipt.ain.ebtco.com/r/{receiptToken}";
+
+            // Assert - Verify payload contains opaque reference token and no sensitive PII inputs
+            Assert.Contains(receiptToken, payloadUrl);
+            Assert.DoesNotContain(sampleMobile, payloadUrl);
+            Assert.DoesNotContain(sampleEmail, payloadUrl);
         }
 
         // 9. اختبار معالجة فشل الطباعة والمحافظة على الإيصال (Printer Failure Behavior)

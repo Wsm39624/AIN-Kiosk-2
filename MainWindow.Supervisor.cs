@@ -2,6 +2,10 @@
 
 namespace AIN_Kiosk
 {
+    /// <summary>
+    /// Partial class handling supervisor console authentication and retroactive record entries.
+    /// Addresses Task #7 (Prototype Supervisor Gate labeling) and Task #10 (Flexible document length validation).
+    /// </summary>
     public partial class MainWindow
     {
         private void BtnSupervisorTrigger_Click(object sender, RoutedEventArgs e)
@@ -20,6 +24,7 @@ namespace AIN_Kiosk
 
         private void BtnSubmitPin_Click(object sender, RoutedEventArgs e)
         {
+            // Task #7: Labeled explicitly as a Prototype Supervisor Gate (Not Production Authentication)
             if (TxtSupervisorPin.Password == SupervisorPinCode)
             {
                 ViewSupervisorAuth.Visibility = Visibility.Collapsed;
@@ -27,8 +32,10 @@ namespace AIN_Kiosk
             }
             else
             {
-                string errorTitle = isArabic ? "خطأ في الصلاحية" : "Authorization Fault";
-                string errorMsg = isArabic ? "رمز الأمان المدخل غير صحيح!" : "Invalid supervisor PIN code entered!";
+                string errorTitle = isArabic ? "بوابة المشرف التجريبية" : "Prototype Supervisor Gate";
+                string errorMsg = isArabic
+                    ? "[Prototype Supervisor Gate Not Production Authentication]\nرمز الأمان المدخل غير صحيح!"
+                    : "[Prototype Supervisor Gate Not Production Authentication]\nInvalid supervisor PIN code entered!";
 
                 MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
                 TxtSupervisorPin.Password = string.Empty;
@@ -72,9 +79,13 @@ namespace AIN_Kiosk
                 return;
             }
 
-            if (TxtRetroDocNumber.Text.Trim().Length != 10)
+            // Task #10: Corrected document validation to allow varied document/passport lengths (5 to 20 characters)
+            string docNum = TxtRetroDocNumber.Text.Trim();
+            if (docNum.Length < 5 || docNum.Length > 20)
             {
-                string msg = isArabic ? "رقم الهوية / الوثيقة يجب أن يتكون من 10 أرقام بالضبط!" : "National ID / Document number must be exactly 10 digits!";
+                string msg = isArabic
+                    ? "رقم الوثيقة غير صحيح (يجب أن يكون بين 5 إلى 20 خانة بحسب نوع الوثيقة)!"
+                    : "Invalid document number! Length must be between 5 and 20 characters based on document type.";
                 MessageBox.Show(msg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
