@@ -21,7 +21,3 @@ dotnet build --configuration Release
 
 # 4. Execute test suite
 dotnet test --configuration Release
-
-
-##  Submission Verification
-* **Exact Git Commit Hash:** `e47ab6aade3d58e5d6da1081517a095c88dced58`
