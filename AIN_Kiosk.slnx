@@ -1,10 +1,15 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="ABP_BACKEND_INTEGRATION_NOTES.md" />
+    <File Path="ARCHITECTURE_DECISIONS.md" />
+    <File Path="BUILD_OUTPUT.txt" />
+    <File Path="DECODED_QR_EVIDENCE.txt" />
+    <File Path="PGF_FUTURE_INTEGRATION.md" />
     <File Path="README.md" />
+    <File Path="TEMPORARY_IMPLEMENTATIONS.md" />
+    <File Path="TEST_EXECUTION_OUTPUT.txt" />
   </Folder>
-  <Folder Name="/Tests/">
-    <Project Path="Tests/AIN_Kiosk.Tests.csproj" />
-  </Folder>
-  <Project Path="../AIN.Visitors.Mrz-main/AIN.Visitors.Mrz-main/AIN.Visitors.Mrz/AIN.Visitors.Mrz.csproj" />
-  <Project Path="AIN_Kiosk.csproj" />
+  <Project Path="AIN.Visitors.Mrz/AIN.Visitors.Mrz.csproj" />
+  <Project Path="AIN_Kiosk.Tests/AIN_Kiosk.Tests.csproj" />
+  <Project Path="AIN_Kiosk/AIN_Kiosk.csproj" />
 </Solution>

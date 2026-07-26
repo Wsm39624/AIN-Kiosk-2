@@ -15,7 +15,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\AIN_Kiosk.csproj" />
+		<ProjectReference Include="..\AIN_Kiosk\AIN_Kiosk.csproj" />
 	</ItemGroup>
 
 </Project>
