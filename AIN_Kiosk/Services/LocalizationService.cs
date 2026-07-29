@@ -5,6 +5,8 @@ namespace AIN_Kiosk.Services
 {
     public class LocalizationService
     {
+        private string _currentCulture = "ar";
+
         // مخزن النصوص اللغوية الشامل لعناصر الواجهة
         private readonly Dictionary<string, (string Ar, string En)> _stringResources = new()
         {
@@ -51,14 +53,19 @@ namespace AIN_Kiosk.Services
             { "BtnSubmitRetroactive", ("تأكيد وحفظ السجل بأثر رجعي", "Confirm & Save Retroactive Record") },
             { "BtnCancelRetroactive", ("إلغاء والعودة للرئيسية", "Cancel & Return Home") },
 
-            // نصوص سياسة الخصوصية وحماية البيانات (PDPL)
-            { "PrivacyTitleWalkIn", ("إقرار سياسة الخصوصية الفوري (One-Click Consent)", "One-Click Privacy Consent") },
-            { "PrivacyBodyWalkIn", ("بضغطك على الزر أدناه، يتم منح الموافقة الفورية على معالجة الهوية آلياً وإصدار بطاقة الدخول الممتثلة لنظام PDPL.", "By clicking the button below, you grant immediate authorization to process your ID metadata and issue a temporary entry badge compliant with PDPL regulations.") },
-            { "PrivacyTitleDefault", ("وثيقة سياسة الخصوصية وحماية البيانات", "Privacy Policy & Data Protection Contract") },
-            { "PrivacyBodyDefault", ("يتعهد نظام (عين) لحلول الزوار بحماية بياناتك الشخصية وفقاً للأنظمة واللوائح الصادرة من الهيئة السعودية للبيانات والذكاء الاصطناعي (سدايا) ومصرف تداول المركزي (ساما). بضغطك على زر (أوافق واطبع البطاقة)، فإنك تمنح النظام صلاحية معالجة هذه البيانات بشكل آمن ومؤقت.", "The (AIN) Visitor Solutions system is committed to protecting your personal data in accordance with the regulations issued by SDAIA and SAMA. By clicking (Accept & Print Badge), you grant the system permission to process this data securely.") }
+            // نصوص سياسة الخصوصية وحماية البيانات
+            { "PrivacyTitleWalkIn", ("إشعار الخصوصية وشروط معالجة البيانات", "Privacy Notice & Data Processing Terms") },
+            { "PrivacyBodyWalkIn", ("يتم جمع بياناتك للتحقق من الهوية وإصدار تصاريح الدخول وفقاً لسياسة المنشأة المعمول بها.", "Your data is collected for identity verification and badge issuance in accordance with the facility's policy.") },
+            { "PrivacyTitleDefault", ("إشعار الخصوصية وشروط معالجة البيانات", "Privacy Notice & Data Processing Terms") },
+            { "PrivacyBodyDefault", ("يتم جمع ومعالجة بيانات الزائرين وفقاً للأنظمة والسياسات المعتمدة لدى المنشأة. يرجى مراجعة الإشعار قبل المتابعة.", "Visitor data is collected and processed according to approved facility policies. Please review the notice before proceeding.") },
+
+            // أزرار وقوائم مساعدة إضافية
+            { "BtnAccept", ("موافقة واستمرار", "Accept & Continue") },
+            { "BtnCancel", ("إلغاء", "Cancel") },
+            { "HelpTitle", ("المساعدة والدعم", "Help & Support") },
+            { "HelpBody", ("يرجى التواصل مع موظف الاستقبال للحصول على المساعدة الفورية.", "Please approach the reception desk for immediate assistance.") }
         };
 
-        // دالة جلب النص بناءً على مفتاح العنصر واللغة الحالية
         public string GetText(string key, bool isArabic)
         {
             if (_stringResources.TryGetValue(key, out var resource))
@@ -66,6 +73,16 @@ namespace AIN_Kiosk.Services
                 return isArabic ? resource.Ar : resource.En;
             }
             return string.Empty;
+        }
+
+        public string GetString(string key)
+        {
+            return GetText(key, _currentCulture == "ar");
+        }
+
+        public void SetCulture(string culture)
+        {
+            _currentCulture = culture;
         }
     }
 }

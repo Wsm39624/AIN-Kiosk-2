@@ -1,10 +1,12 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
+using AIN_Kiosk.Helpers;
 
 namespace AIN_Kiosk
 {
     /// <summary>
     /// Partial class handling supervisor console authentication and retroactive record entries.
-    /// Addresses Task #7 (Prototype Supervisor Gate labeling) and Task #10 (Flexible document length validation).
+    /// Addresses Task #7 (Prototype Supervisor Gate labeling) and Task #10 (Flexible document validation).
     /// </summary>
     public partial class MainWindow
     {
@@ -24,11 +26,14 @@ namespace AIN_Kiosk
 
         private void BtnSubmitPin_Click(object sender, RoutedEventArgs e)
         {
-            // Task #7: Labeled explicitly as a Prototype Supervisor Gate (Not Production Authentication)
-            if (TxtSupervisorPin.Password == SupervisorPinCode)
+            string enteredPin = TxtSupervisorPin.Password ?? string.Empty;
+
+            // Task #7: Labeled explicitly & dynamic PIN check via ValidateSupervisorPin(_configProvider.SupervisorDemoPin)
+            if (ValidateSupervisorPin(enteredPin))
             {
                 ViewSupervisorAuth.Visibility = Visibility.Collapsed;
                 ViewSupervisorConsole.Visibility = Visibility.Visible;
+                TxtSupervisorPin.Password = string.Empty;
             }
             else
             {
@@ -79,13 +84,14 @@ namespace AIN_Kiosk
                 return;
             }
 
-            // Task #10: Corrected document validation to allow varied document/passport lengths (5 to 20 characters)
+            // Task #10: Corrected document validation using DocumentValidationHelper
             string docNum = TxtRetroDocNumber.Text.Trim();
-            if (docNum.Length < 5 || docNum.Length > 20)
+            string selectedDocType = "national_id"; // افتراضي
+            if (!DocumentValidationHelper.IsValidDocument(docNum, selectedDocType, "SA"))
             {
                 string msg = isArabic
-                    ? "رقم الوثيقة غير صحيح (يجب أن يكون بين 5 إلى 20 خانة بحسب نوع الوثيقة)!"
-                    : "Invalid document number! Length must be between 5 and 20 characters based on document type.";
+                    ? "رقم الوثيقة/الهوية غير صحيح بالنسبة للنوع المحدد!"
+                    : "Invalid document number for the selected type!";
                 MessageBox.Show(msg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }

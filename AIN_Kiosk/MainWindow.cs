@@ -16,7 +16,6 @@ namespace AIN_Kiosk
     {
         private bool isArabic = true;
         private string _receiptToken = string.Empty;
-        private const string SupervisorPinCode = "1234";
 
         private readonly KioskWorkflowService _workflowService;
         private readonly BadgePrintService _printService;
@@ -51,6 +50,12 @@ namespace AIN_Kiosk
 
             ApplyLanguage();
             InitializeIdleTimer();
+        }
+
+        // الدالة الديناميكية للتحقق من رمز PIN للمشرف عبر مزود الإعدادات
+        private bool ValidateSupervisorPin(string enteredPin)
+        {
+            return enteredPin == _configProvider.SupervisorDemoPin;
         }
 
         #region Input Rules & Validation Rules

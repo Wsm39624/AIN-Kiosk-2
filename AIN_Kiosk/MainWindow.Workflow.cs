@@ -124,6 +124,13 @@ namespace AIN_Kiosk
         /// Unified pipeline step creating distinct badge/receipt references and loading privacy view.
         /// Fixes Task #4, Task #5, and Task #6 compliance requirements.
         /// </summary>
+
+        internal void ResetSessionTokens()
+        {
+            _badgeToken = string.Empty;
+            _receiptToken = string.Empty;
+        }
+
         private void PrepareReceiptAndPrivacyStep()
         {
             // Task #5: Invoke IReceiptReferenceProvider (GetSyntheticToken) rather than generating raw GUIDs directly in UI

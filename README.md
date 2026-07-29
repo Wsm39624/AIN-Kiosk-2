@@ -8,7 +8,7 @@ A WPF (.NET 10) self-service kiosk solution for visitor registration, identity d
 
 To clone, restore, build, and run the automated behavioral test suite on a clean environment, execute:
 
-```bash
+```powershell
 # 1. Clone repository
 git clone <repository-url>
 cd AIN_Kiosk

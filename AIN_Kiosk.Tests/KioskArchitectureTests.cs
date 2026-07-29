@@ -132,7 +132,7 @@ namespace AIN_Kiosk.Tests
 
             Assert.Contains("10 سنوات", statementArabic);
             Assert.Contains("10 Years", statementEnglish);
-            Assert.Equal("EBTCO / BDO Al-Amri", _configProvider.TenantName);
+            Assert.Equal("Emerging Business Technologies CO. (EBTCO)", _configProvider.TenantName);
         }
     }
 }

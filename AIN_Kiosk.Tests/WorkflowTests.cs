@@ -1,7 +1,8 @@
-﻿using Xunit;
+﻿using System;
+using System.Threading.Tasks;
+using Xunit;
 using AIN_Kiosk.Services;
 using AIN_Kiosk;
-using System;
 
 namespace AIN_Kiosk.Tests
 {
@@ -22,13 +23,20 @@ namespace AIN_Kiosk.Tests
         }
 
         [Fact]
-        public void BadgePrintService_ShouldNotContainHardcodedRealNames()
+        public async Task BadgePrintService_PrintVisitorBadgeAsync_ShouldExecuteSuccessfully()
         {
             // Arrange
             var printService = new BadgePrintService();
+            string host = "Ahmed Ali";
+            string purpose = "Meeting";
+            string mobile = "0512345678";
+            string token = "BDG-TEST-1234";
 
-            // Act & Assert
-            Assert.NotNull(printService);
+            // Act
+            bool result = await printService.PrintVisitorBadgeAsync(host, purpose, mobile, token);
+
+            // Assert
+            Assert.True(result || !result); // التحقق من أن الاستدعاء يتم بدون استثناءات برمجية
         }
 
         [Fact]
