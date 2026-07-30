@@ -47,7 +47,7 @@ namespace AIN_Kiosk
 
             TxtRetroVisitorName.Tag = isArabic ? "أدخل اسم الزائر الكامل" : "Enter visitor full name";
 
-            // Task #10: Removed rigid "10 digits" label restriction
+            // Task #10: Removed rigid 10 digits label restriction
             TxtRetroDocNumber.Tag = isArabic ? "رقم الهوية الوطنية أو جواز السفر" : "National ID or Passport Document Number";
             TxtRetroHostName.Tag = isArabic ? "اسم الموظف المستضيف" : "Host employee name";
             TxtRetroPurpose.Tag = isArabic ? "اكتب الغرض الفعلي من الزيارة" : "Type actual visit purpose";
@@ -63,7 +63,7 @@ namespace AIN_Kiosk
             LblPurpose.Text = _localizationService.GetText("LblPurpose", isArabic);
             LblMobile.Text = _localizationService.GetText("LblMobile", isArabic);
 
-            // Task #9: Configurable email handling (Default approved state requires email for digital receipt)
+            // Task #9: Configurable email handling
             LblEmail.Text = isArabic ? "البريد الإلكتروني (مطلوب للإيصال الرقمي):" : "Email Address (Required for Digital Receipt):";
 
             ChipMeeting.Content = _localizationService.GetText("ChipMeeting", isArabic);
@@ -75,7 +75,7 @@ namespace AIN_Kiosk
             BtnNextToPrivacy.Content = _localizationService.GetText("BtnNextToPrivacy", isArabic);
 
             QrLabel.Text = isArabic ? "امسح الرمز للاحتفاظ بالوثيقة" : "Scan QR to keep the receipt";
-            if (!_workflowService.IsInErrorState) BtnAcceptPrint.Content = isArabic ? "أوافق واطبع البطاقة" : "Agree & Print Badge";
+            if (!_workflowService.IsInErrorState) BtnAcceptPrint.Content = isArabic ? "متابعة وطباعة البطاقة" : "Continue & Print Badge";
             BtnDoneReceipt.Content = isArabic ? "إنهـاء والعودة للرئيسية" : "Finish & Return Home";
 
             TxtRetroTitle.Text = isArabic ? "تسجيل زائر بأثر رجعي" : "Retroactive Entry";
@@ -88,7 +88,7 @@ namespace AIN_Kiosk
             BtnSubmitRetroactive.Content = isArabic ? "تأكيد وحفظ السجل بأثر رجعي" : "Confirm & Save Retroactive Record";
             BtnCancelRetroactive.Content = isArabic ? "إلغاء والعودة للرئيسية" : "Cancel & Return Home";
 
-            // Task #8: Removed misleading hardcoded claims ("One-Click Privacy Consent", "PDPL Compliant", etc.)
+            // Task #8: Removed misleading hardcoded claims
             PrivacyTitle.Text = isArabic ? "إشعار الخصوصية وشروط معالجة البيانات" : "Privacy Notice & Data Processing Terms";
             PrivacyBody.Text = isArabic
                 ? $"تلتزم جهة ({_configProvider.TenantName}) بمعالجة بيانات الزوار وفقاً للأطر التنظيمية المعمول بها وبناءً على شروط الخدمة المعتمدة. تشمل المعالجة طباعة بطاقة الزائر وإشعار المستضيف."
@@ -100,7 +100,6 @@ namespace AIN_Kiosk
             }
         }
 
-        // Task #11: Implemented Help Button action
         private void BtnHelp_Click(object sender, RoutedEventArgs e)
         {
             string helpTitle = isArabic ? "تعليمات استخدام جهاز الخدمة الذاتية" : "Kiosk Help & Instructions";
@@ -157,7 +156,8 @@ namespace AIN_Kiosk
 
             if (isArabic)
             {
-                TxtReceiptHeader.Text = "✓ تم إصدار إيصال الخصوصية الرقمي بنجاح";
+                // Item 5: Updated to match prototype receipt status preview wording
+                TxtReceiptHeader.Text = "معاينة الإيصال الرقمي - بانتظار الإصدار من السيرفر";
 
                 TxtReceptionistAlert.Text = _workflowService.CurrentFlow == "WalkIn"
                     ? "[معاينة محاكاة - لم يُرسل] تنبيه الاستقبال: تسجيل دخول زائر بدون موعد."
@@ -169,7 +169,8 @@ namespace AIN_Kiosk
             }
             else
             {
-                TxtReceiptHeader.Text = "✓ Digital Privacy Receipt Issued Successfully";
+                // Item 5: Updated to match prototype receipt status preview wording
+                TxtReceiptHeader.Text = "Digital Privacy Receipt Preview — Backend issuance pending";
 
                 TxtReceptionistAlert.Text = _workflowService.CurrentFlow == "WalkIn"
                     ? "[Simulated Preview - Not Sent] Receptionist alert: Walk-in check-in logged."

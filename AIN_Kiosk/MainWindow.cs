@@ -70,6 +70,12 @@ namespace AIN_Kiosk
             e.Handled = !Regex.IsMatch(e.Text, @"^[0-9]+$");
         }
 
+        // Item 10: Support alphanumeric input for passport document numbers
+        private void Input_Alphanumeric_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            e.Handled = !Regex.IsMatch(e.Text, @"^[a-zA-Z0-9]+$");
+        }
+
         #endregion
 
         private void ResetToHomeView(bool forceResetToArabic = false)

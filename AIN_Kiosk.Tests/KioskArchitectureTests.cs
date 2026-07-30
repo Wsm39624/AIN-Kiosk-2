@@ -1,4 +1,5 @@
 ﻿using System;
+using AIN_Kiosk;
 using AIN_Kiosk.Adapters;
 using AIN_Kiosk.Helpers;
 using AIN_Kiosk.Services;
@@ -104,8 +105,12 @@ namespace AIN_Kiosk.Tests
         }
 
         [Fact]
-        public void Test_9_SessionReset_ClearsWorkflowAndTokens()
+        public void Test_9_SessionReset_ClearsWorkflowAndState()
         {
+            _workflowService.SelectedHostName = "Test Host";
+            _workflowService.SelectedMobile = "0512345678";
+            _workflowService.IsInErrorState = true;
+
             _workflowService.ResetSession();
 
             Assert.Equal(string.Empty, _workflowService.SelectedHostName);
@@ -114,7 +119,49 @@ namespace AIN_Kiosk.Tests
         }
 
         [Fact]
-        public void Test_10_MockProviders_ReturnConfiguredTenantValues()
+        public void Test_10_PrinterFailure_EntersErrorStateAndAllowsRecovery()
+        {
+            _workflowService.IsInErrorState = true;
+
+            Assert.True(_workflowService.IsInErrorState);
+
+            _workflowService.ResetSession();
+
+            Assert.False(_workflowService.IsInErrorState);
+        }
+
+        [Fact]
+        public void Test_11_VisitorSession_ToSafeAuditLog_ExcludesPIIAndStaticFlags()
+        {
+            var session = new VisitorSession(Guid.NewGuid(), "OP_123");
+            session.SetIdentityData("John Doe", "1234567890", "SA", DateTime.Now.AddYears(-25), new byte[] { 1, 2, 3 }, false);
+
+            string auditLog = session.ToSafeAuditLog();
+
+            Assert.DoesNotContain("John Doe", auditLog);
+            Assert.DoesNotContain("1234567890", auditLog);
+            Assert.DoesNotContain("BiometricsCaptured", auditLog);
+            Assert.DoesNotContain("CameraActive", auditLog);
+            Assert.Contains("OP_123", auditLog);
+        }
+
+        [Fact]
+        public void Test_12_VisitorSession_WipeSensitiveDataInMemory_ClearsFieldsAndBuffers()
+        {
+            var session = new VisitorSession(Guid.NewGuid(), "OP_123");
+            byte[] imagePayload = new byte[] { 1, 2, 3, 4, 5 };
+            session.SetIdentityData("John Doe", "1234567890", "SA", DateTime.Now.AddYears(-25), imagePayload, false);
+
+            session.WipeSensitiveDataInMemory();
+
+            Assert.Equal(string.Empty, session.VisitorFullName);
+            Assert.Equal(string.Empty, session.RawDocumentNumber);
+            Assert.Null(session.DateOfBirth);
+            Assert.Null(session.RawDocumentImagePayload);
+        }
+
+        [Fact]
+        public void Test_13_MockProviders_ReturnConfiguredTenantValues()
         {
             string statementArabic = _privacyNoticeProvider.GetRetentionStatement(true);
 
