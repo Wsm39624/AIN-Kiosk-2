@@ -19,6 +19,7 @@ namespace AIN.Visitors.Mrz.Models
         IllegalCharacter,
         AmbiguousCentury,
         UnsupportedFormat,
-        InternalParserFailure
+        InternalParserFailure,
+        HardwareError
     }
 }

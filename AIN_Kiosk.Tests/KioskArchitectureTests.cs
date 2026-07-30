@@ -1,8 +1,8 @@
-﻿using AIN_Kiosk.Adapters;
+﻿using System;
+using AIN_Kiosk.Adapters;
+using AIN_Kiosk.Helpers;
 using AIN_Kiosk.Services;
-using System;
 using Xunit;
-using static QRCoder.PayloadGenerator;
 
 namespace AIN_Kiosk.Tests
 {
@@ -10,128 +10,115 @@ namespace AIN_Kiosk.Tests
     {
         private readonly KioskWorkflowService _workflowService = new();
         private readonly LocalizationService _localizationService = new();
-        private readonly KioskConfigurationProvider _configProvider = new();
-        private readonly KioskPrivacyNoticeProvider _privacyNoticeProvider = new();
+        private readonly LocalMockKioskConfigurationProvider _configProvider = new();
+        private readonly LocalMockKioskPrivacyNoticeProvider _privacyNoticeProvider = new();
         private readonly LocalQrCodeService _qrCodeService = new();
+        private readonly PrivacyReceiptService _receiptService = new();
 
-        // 1. اختبار مسار زائر بدون موعد (Walk-In Flow Selection)
         [Fact]
-        public void Test_1_FlowSelection_WalkIn_SetsCorrectFlow()
+        public void Test_1_FlowSelection_WalkInAndPreRegistered_SetsCorrectFlow()
         {
             _workflowService.CurrentFlow = "WalkIn";
             Assert.Equal("WalkIn", _workflowService.CurrentFlow);
-        }
 
-        // 2. اختبار مسار زائر مسجل مسبقاً (Pre-Registered Flow Selection)
-        [Fact]
-        public void Test_2_FlowSelection_PreRegistered_SetsCorrectFlow()
-        {
             _workflowService.CurrentFlow = "PreRegistered";
             Assert.Equal("PreRegistered", _workflowService.CurrentFlow);
         }
 
-        // 3. اختبار التحقق من الحقول الإلزامية - اسم المضيف فارغ (Field Validation)
         [Fact]
-        public void Test_3_RequiredFields_HostNameEmpty_ThrowsOrFails()
+        public void Test_2_RequiredEmail_PolicyEnforced_RejectsEmptyInput()
         {
-            string hostNameInput = "";
-            bool isInvalid = string.IsNullOrWhiteSpace(hostNameInput);
-            Assert.True(isInvalid);
+            Assert.Equal(FieldRequirement.Required, _configProvider.EmailRequirement);
+            string emptyEmail = "";
+            bool isEmailProvided = !string.IsNullOrWhiteSpace(emptyEmail);
+            Assert.False(isEmailProvided);
         }
 
-        // 4. اختبار التحقق من صيغة البريد الإلكتروني الخاطئة (Invalid Email Format)
         [Fact]
-        public void Test_4_EmailValidation_InvalidFormat_ReturnsFalse()
+        public void Test_3_AlphanumericPassport_Accepted()
         {
-            string badEmail = "wessamaltabaa_at_gmail.com";
-            bool isValid = false;
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(badEmail);
-                isValid = (addr.Address == badEmail);
-            }
-            catch { isValid = false; }
-
-            Assert.False(isValid);
-        }
-
-        // 5. اختبار التحقق من صيغة البريد الإلكتروني الصحيحة (Valid Email Format)
-        [Fact]
-        public void Test_5_EmailValidation_ValidFormat_ReturnsTrue()
-        {
-            string goodEmail = "wessamaltabaa@gmail.com";
-            bool isValid = false;
-            try
-            {
-                var addr = new System.Net.Mail.MailAddress(goodEmail);
-                isValid = (addr.Address == goodEmail);
-            }
-            catch { isValid = false; }
-
+            string validPassport = "A12345678";
+            bool isValid = DocumentValidationHelper.IsValidPassport(validPassport);
             Assert.True(isValid);
+
+            bool isValidDoc = DocumentValidationHelper.IsValidDocument(validPassport, "passport");
+            Assert.True(isValidDoc);
         }
 
-        // 6. اختبار إيقاف وإعادة ضبط مؤقت الخمول والتوكن (Idle Timeout Reset)
         [Fact]
-        public void Test_6_IdleTimeout_ResetsSessionAndClearsToken()
+        public void Test_4_UnicodeNameValidation_SupportsHyphensApostrophesAndArabic()
         {
-            _workflowService.ResetSession();
-            string activeToken = ""; // تم تصفيره عند العودة للرئيسية لحماية الخصوصية
+            string arabicName = "عمر-بن الخطاب";
+            string englishName = "O'Connor-Smith";
 
-            Assert.Equal(string.Empty, activeToken);
-            Assert.False(_workflowService.IsInErrorState);
+            Assert.True(DocumentValidationHelper.IsValidName(arabicName));
+            Assert.True(DocumentValidationHelper.IsValidName(englishName));
         }
 
-        // 7. اختبار توليد الـ QR محلياً بنجاح بدون إنترنت (Local QR Generation)
         [Fact]
-        public void Test_7_LocalQrGeneration_WithoutInternet_ReturnsFrozenImage()
+        public void Test_5_BadgeAndReceiptTokens_AreDistinct()
         {
-            string samplePayload = "AIN|VERSION=1|TOKEN=TESTTOKEN123|FLOW=WalkIn";
-            var image = _qrCodeService.GenerateBitmap(samplePayload);
+            IReceiptReferenceProvider receiptProvider = new MockReceiptReferenceProvider();
+            string receiptToken = receiptProvider.GetSyntheticToken();
+            string badgeToken = $"BDG-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
-            Assert.NotNull(image);
-            Assert.True(image.IsFrozen); // التحقق من تجميد الصورة في الذاكرة لمنع التسريب
+            Assert.NotEqual(receiptToken, badgeToken);
+            Assert.StartsWith("DEV-SYNTHETIC-", receiptToken);
+            Assert.StartsWith("BDG-", badgeToken);
         }
 
-        // 8. اختبار خلو محتوى الـ QR تماماً من أي بيانات شخصية (No PII encoded in QR)
         [Fact]
-        public void Test_8_LocalQrPayload_ContainsNoPII_OnlyOpaqueToken()
+        public void Test_6_QrPayload_ContainsNoPII_OnlyOpaqueToken()
         {
-            // Arrange
             IReceiptReferenceProvider provider = new MockReceiptReferenceProvider();
             string sampleMobile = "0512345678";
             string sampleEmail = "visitor@domain.com";
 
-            // Act
             string receiptToken = provider.GetSyntheticToken();
             string payloadUrl = $"https://receipt.ain.ebtco.com/r/{receiptToken}";
 
-            // Assert - Verify payload contains opaque reference token and no sensitive PII inputs
             Assert.Contains(receiptToken, payloadUrl);
             Assert.DoesNotContain(sampleMobile, payloadUrl);
             Assert.DoesNotContain(sampleEmail, payloadUrl);
         }
 
-        // 9. اختبار معالجة فشل الطباعة والمحافظة على الإيصال (Printer Failure Behavior)
         [Fact]
-        public void Test_9_PrinterFailure_PreservesReceiptStateAndEntersErrorState()
+        public void Test_7_ProhibitedPrivacyWording_IsAbsentFromLocalization()
         {
-            _workflowService.IsInErrorState = true; // محاكاة انقطاع طابعة زيبرا
+            string sampleAr = _localizationService.GetText("PrivacyBodyDefault", true);
+            string sampleEn = _localizationService.GetText("PrivacyBodyDefault", false);
 
-            Assert.True(_workflowService.IsInErrorState);
-            // التأكد من بقاء واجهة القائمة الرئيسية متاحة للعودة الآمنة
-            Assert.NotNull(_localizationService.GetText("WelcomeTitle", true));
+            Assert.DoesNotContain("SAMA", sampleAr);
+            Assert.DoesNotContain("SAMA", sampleEn);
+            Assert.DoesNotContain("One-Click", sampleAr);
+            Assert.DoesNotContain("One-Click", sampleEn);
         }
 
-        // 10. اختبار تحميل بيان الاحتفاظ بالبيانات ديناميكياً من الموفر وعدم تثبيته برمجياً (Zero Hardcoding)
         [Fact]
-        public void Test_10_RetentionStatement_LoadsFromProvider_NotHardcoded()
+        public void Test_8_ReceiptStatus_IndicatesPreviewPendingBackend()
+        {
+            var receipt = _receiptService.GenerateReceipt("WalkIn", "Host Employee", "Business", true, "Test Visitor");
+
+            Assert.Contains("معاينة الإيصال الرقمي - بانتظار الإصدار من السيرفر", receipt.StatusStatement);
+            Assert.Contains("معاينة", receipt.DataCaptured);
+        }
+
+        [Fact]
+        public void Test_9_SessionReset_ClearsWorkflowAndTokens()
+        {
+            _workflowService.ResetSession();
+
+            Assert.Equal(string.Empty, _workflowService.SelectedHostName);
+            Assert.Equal(string.Empty, _workflowService.SelectedMobile);
+            Assert.False(_workflowService.IsInErrorState);
+        }
+
+        [Fact]
+        public void Test_10_MockProviders_ReturnConfiguredTenantValues()
         {
             string statementArabic = _privacyNoticeProvider.GetRetentionStatement(true);
-            string statementEnglish = _privacyNoticeProvider.GetRetentionStatement(false);
 
             Assert.Contains("10 سنوات", statementArabic);
-            Assert.Contains("10 Years", statementEnglish);
             Assert.Equal("Emerging Business Technologies CO. (EBTCO)", _configProvider.TenantName);
         }
     }

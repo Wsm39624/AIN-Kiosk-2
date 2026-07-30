@@ -5,33 +5,35 @@ using AIN_Kiosk.Services;
 
 namespace AIN_Kiosk
 {
-    // واجهة طابعة الشارات (Zebra)
+    // Badge printer hardware abstraction interface
     public interface IBadgePrinter
     {
         Task<bool> PrintBadgeAsync(string zplTemplate, CancellationToken cancellationToken);
     }
 
-    // واجهة المزامنة مع الـ Backend
+    // Backend visitor synchronization transport interface
     public interface IVisitorSyncTransport
     {
         Task<bool> SyncVisitorAsync(object session, CancellationToken cancellationToken);
     }
 
-    // الواجهة البرمجية المطلوبة رقابياً لتأمين مسار المزامنة دون persistence
+    // In-memory registration queue interface for transient session simulation
     public interface IRegistrationQueue
     {
-        void EnqueueMockRecord(string flow, string visitorName);
+        void EnqueueMockRecord(string flow, string sessionRef);
     }
 
+    // Mock implementation of transient registration queue without PII logging
     public class MockRegistrationQueue : IRegistrationQueue
     {
-        public void EnqueueMockRecord(string flow, string visitorName)
+        public void EnqueueMockRecord(string flow, string sessionRef)
         {
-            System.Diagnostics.Debug.WriteLine($"[Mock Queue] Enqueued {flow} for {visitorName} (Simulated - not persisted).");
+            // Logs use synthetic correlation references to avoid writing visitor PII to debug output
+            System.Diagnostics.Debug.WriteLine($"[Mock Queue] Enqueued {flow} for session ref {sessionRef} (Simulated - not persisted).");
         }
     }
 
-    // واجهة إعدادات الكشك (تم تحديثها لتشمل متطلبات البريد ورمز المشرف)
+    // Kiosk configuration provider contract
     public interface IKioskConfigurationProvider
     {
         string TenantName { get; }
@@ -42,23 +44,24 @@ namespace AIN_Kiosk
         string SupervisorDemoPin { get; }
     }
 
-    // واجهة استهلاك فترات الاحتفاظ بالبيانات المعتمدة رقابياً
+    // Privacy notice provider contract
     public interface IKioskPrivacyNoticeProvider
     {
         string GetRetentionStatement(bool isArabic);
     }
 
+    // Digital receipt reference provider contract
     public interface IReceiptReferenceProvider
     {
         string GetSyntheticToken();
     }
 
-    // المحاكي الملتزم بإرجاع توكن تطويري صريح وغير مضلل رقابياً
+    // Local mock provider returning synthetic developmental receipt references
     public class MockReceiptReferenceProvider : IReceiptReferenceProvider
     {
         public string GetSyntheticToken()
         {
-            return "DEV-SYNTHETIC-" + System.Guid.NewGuid().ToString("N").ToUpperInvariant();
+            return "DEV-SYNTHETIC-" + Guid.NewGuid().ToString("N").ToUpperInvariant();
         }
     }
 }

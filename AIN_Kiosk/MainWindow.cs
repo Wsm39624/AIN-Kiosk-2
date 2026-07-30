@@ -38,8 +38,8 @@ namespace AIN_Kiosk
             _localizationService = new LocalizationService();
             _scannerAdapter = new ScannerAdapter();
             _qrCodeService = new LocalQrCodeService();
-            _configProvider = new KioskConfigurationProvider();
-            _privacyNoticeProvider = new KioskPrivacyNoticeProvider();
+            _configProvider = new LocalMockKioskConfigurationProvider();
+            _privacyNoticeProvider = new LocalMockKioskPrivacyNoticeProvider();
             _registrationQueue = new MockRegistrationQueue();
             _receiptReferenceProvider = new MockReceiptReferenceProvider();
 
@@ -52,7 +52,7 @@ namespace AIN_Kiosk
             InitializeIdleTimer();
         }
 
-        // الدالة الديناميكية للتحقق من رمز PIN للمشرف عبر مزود الإعدادات
+        // Dynamic validator for supervisor prototype gate PIN
         private bool ValidateSupervisorPin(string enteredPin)
         {
             return enteredPin == _configProvider.SupervisorDemoPin;
@@ -62,7 +62,7 @@ namespace AIN_Kiosk
 
         private void Input_OnlyLetters_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
-            e.Handled = !Regex.IsMatch(e.Text, @"^[a-zA-Z\u0600-\u06FF\s]+$");
+            e.Handled = !Regex.IsMatch(e.Text, @"^[a-zA-Z\u0600-\u06FF\s\-']+$");
         }
 
         private void Input_OnlyDigits_PreviewTextInput(object sender, TextCompositionEventArgs e)

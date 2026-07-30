@@ -1,8 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace AIN_Kiosk.Adapters
 {
-    // الواجهة ضرورية لعمل الـ Dependency Injection (DI) والاختبارات (Mocking)
+    // Printer adapter interface enabling dependency injection and test mocking
     public interface IPrinterAdapter
     {
         bool SendStringToPrinter(string printerName, string zplData);
@@ -10,17 +11,19 @@ namespace AIN_Kiosk.Adapters
 
     public class PrinterAdapter : IPrinterAdapter
     {
-        // تم إضافة 'virtual' لكي نتمكن من عمل Mocking لهذه الدالة في xUnit
+        // Virtual method allowing test frameworks to mock thermal printing operations
         public virtual bool SendStringToPrinter(string printerName, string zplData)
         {
             try
             {
-                // عزل أداة المساعدة الخاصة بالطابعة المادية هنا
+                // Delegate physical thermal printing to raw printer helper
                 return RawPrinterHelper.SendStringToPrinter(printerName, zplData);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // إرجاع false في حال فشل الاتصال بالطابعة أو تعذر إرسال البيانات
+                // Log sanitized diagnostic information containing only exception type and message
+                // Excludes visitor PII, badge content, ZPL payloads, or sensitive tokens
+                Debug.WriteLine($"[Printer Error] Exception Type: {ex.GetType().Name}, Technical Message: {ex.Message}");
                 return false;
             }
         }

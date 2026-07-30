@@ -4,12 +4,14 @@ using AIN_Kiosk.Helpers;
 
 namespace AIN_Kiosk
 {
-    /// <summary>
-    /// Partial class handling supervisor console authentication and retroactive record entries.
-    /// Addresses Task #7 (Prototype Supervisor Gate labeling) and Task #10 (Flexible document validation).
-    /// </summary>
+    // Partial class handling supervisor prototype gate authentication and retroactive record entries
     public partial class MainWindow
     {
+        private int _supervisorFailedAttempts = 0;
+        private DateTime? _supervisorLockoutExpiry = null;
+        private const int MaxSupervisorAttempts = 3;
+        private static readonly TimeSpan LockoutDuration = TimeSpan.FromSeconds(30);
+
         private void BtnSupervisorTrigger_Click(object sender, RoutedEventArgs e)
         {
             ViewHome.Visibility = Visibility.Collapsed;
@@ -26,34 +28,70 @@ namespace AIN_Kiosk
 
         private void BtnSubmitPin_Click(object sender, RoutedEventArgs e)
         {
+            string gateTitle = isArabic
+                ? "بوابة المشرف التجريبية - ليست مصادقة إنتاجية"
+                : "Prototype Supervisor Gate — Not Production Authentication";
+
+            // Enforce temporary lockout if failed attempt threshold was reached
+            if (_supervisorLockoutExpiry.HasValue && DateTime.UtcNow < _supervisorLockoutExpiry.Value)
+            {
+                TimeSpan remaining = _supervisorLockoutExpiry.Value - DateTime.UtcNow;
+                string lockoutMsg = isArabic
+                    ? $"[Prototype Supervisor Gate — Not Production Authentication]\nالبوابة مقفلة مؤقتاً. يرجى الانتظار {Math.Ceiling(remaining.TotalSeconds)} ثانية."
+                    : $"[Prototype Supervisor Gate — Not Production Authentication]\nAccess temporarily locked. Please wait {Math.Ceiling(remaining.TotalSeconds)} seconds.";
+
+                MessageBox.Show(lockoutMsg, gateTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+                TxtSupervisorPin.Password = string.Empty;
+                return;
+            }
+
             string enteredPin = TxtSupervisorPin.Password ?? string.Empty;
 
-            // Task #7: Labeled explicitly & dynamic PIN check via ValidateSupervisorPin(_configProvider.SupervisorDemoPin)
+            // Always clear PIN input after submission attempt for security
+            TxtSupervisorPin.Password = string.Empty;
+
             if (ValidateSupervisorPin(enteredPin))
             {
+                _supervisorFailedAttempts = 0;
+                _supervisorLockoutExpiry = null;
+
                 ViewSupervisorAuth.Visibility = Visibility.Collapsed;
                 ViewSupervisorConsole.Visibility = Visibility.Visible;
-                TxtSupervisorPin.Password = string.Empty;
             }
             else
             {
-                string errorTitle = isArabic ? "بوابة المشرف التجريبية" : "Prototype Supervisor Gate";
-                string errorMsg = isArabic
-                    ? "[Prototype Supervisor Gate Not Production Authentication]\nرمز الأمان المدخل غير صحيح!"
-                    : "[Prototype Supervisor Gate Not Production Authentication]\nInvalid supervisor PIN code entered!";
+                _supervisorFailedAttempts++;
 
-                MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
-                TxtSupervisorPin.Password = string.Empty;
+                if (_supervisorFailedAttempts >= MaxSupervisorAttempts)
+                {
+                    _supervisorLockoutExpiry = DateTime.UtcNow.Add(LockoutDuration);
+                    string lockoutMsg = isArabic
+                        ? $"[Prototype Supervisor Gate — Not Production Authentication]\nتم تجاوز عدد المحاولات المسموح بها. تم قفل البوابة مؤقتاً لمدة {LockoutDuration.TotalSeconds} ثانية."
+                        : $"[Prototype Supervisor Gate — Not Production Authentication]\nMaximum failed attempts exceeded. Access locked for {LockoutDuration.TotalSeconds} seconds.";
+
+                    MessageBox.Show(lockoutMsg, gateTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    int remainingAttempts = MaxSupervisorAttempts - _supervisorFailedAttempts;
+                    string errorMsg = isArabic
+                        ? $"[Prototype Supervisor Gate — Not Production Authentication]\nرمز الأمان غير صحيح. المحاولات المتبقية: {remainingAttempts}"
+                        : $"[Prototype Supervisor Gate — Not Production Authentication]\nInvalid PIN code. Remaining attempts: {remainingAttempts}";
+
+                    MessageBox.Show(errorMsg, gateTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         private void BtnCancelPin_Click(object sender, RoutedEventArgs e)
         {
+            TxtSupervisorPin.Password = string.Empty;
             ResetToHomeView(forceResetToArabic: true);
         }
 
         private void BtnExitConsole_Click(object sender, RoutedEventArgs e)
         {
+            TxtSupervisorPin.Password = string.Empty;
             ResetToHomeView(forceResetToArabic: true);
         }
 
@@ -84,9 +122,8 @@ namespace AIN_Kiosk
                 return;
             }
 
-            // Task #10: Corrected document validation using DocumentValidationHelper
             string docNum = TxtRetroDocNumber.Text.Trim();
-            string selectedDocType = "national_id"; // افتراضي
+            string selectedDocType = "national_id";
             if (!DocumentValidationHelper.IsValidDocument(docNum, selectedDocType, "SA"))
             {
                 string msg = isArabic
@@ -103,7 +140,9 @@ namespace AIN_Kiosk
                 return;
             }
 
-            _registrationQueue.EnqueueMockRecord(_workflowService.CurrentFlow, TxtRetroVisitorName.Text);
+            // Generate synthetic correlation reference for audit queue logging to protect visitor PII
+            string syntheticSessionRef = $"RETRO-{Guid.NewGuid():N}"[..10].ToUpperInvariant();
+            _registrationQueue.EnqueueMockRecord(_workflowService.CurrentFlow, syntheticSessionRef);
 
             string completionMsg = isArabic
                 ? "[محاكاة واجهة - لم يتم الحفظ بالخلفية]\nتم تأكيد نموذج السجل بأثر رجعي محلياً بنجاح."

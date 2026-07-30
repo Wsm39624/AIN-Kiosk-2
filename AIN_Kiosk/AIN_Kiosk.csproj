@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net10.0-windows</TargetFramework>
@@ -11,13 +10,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
 		<PackageReference Include="QRCoder" Version="1.8.0" />
 		<PackageReference Include="Syncfusion.Licensing" Version="34.1.29" />
 		<PackageReference Include="Syncfusion.Shared.WPF" Version="34.1.29" />
-		<PackageReference Include="xunit" Version="2.9.0" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
 		<Compile Remove="Tests\**" />
 		<EmbeddedResource Remove="Tests\**" />
@@ -32,6 +29,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
+		<ProjectReference Include="..\AIN.Visitors.Mrz\AIN.Visitors.Mrz.csproj" />
 	</ItemGroup>
 </Project>

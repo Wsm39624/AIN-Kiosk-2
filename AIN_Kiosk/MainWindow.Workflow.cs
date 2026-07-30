@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
+using AIN_Kiosk.Services;
+using AIN.Visitors.Mrz.Models;
 
 namespace AIN_Kiosk
 {
@@ -32,15 +35,15 @@ namespace AIN_Kiosk
             ViewScan.Visibility = Visibility.Visible;
             ApplyLanguage();
 
-            bool isScanValid = false;
+            ScanResult scanResult;
             try
             {
-                // Execute scan adapter operation (handles mock/simulated scanner hardware)
-                isScanValid = await _scannerAdapter.ExecuteScanAsync();
+                scanResult = await _scannerAdapter.ExecuteScanResultAsync();
             }
             catch (Exception ex)
             {
-                isScanValid = false;
+                scanResult = new ScanResult { ErrorCode = MrzErrorCode.HardwareError };
+                scanResult.Evidence.ValidationStatus = "Invalid";
                 Debug.WriteLine($"[Scanner Fault] Scanner exception: {ex.Message}");
 
                 string errorTitle = isArabic ? "تنبيه النظام" : "System Alert";
@@ -49,20 +52,23 @@ namespace AIN_Kiosk
                 MessageBox.Show(errorMsg, errorTitle, MessageBoxButton.OK, MessageBoxImage.Error);
             }
 
-            if (isScanValid)
+            if (scanResult != null && scanResult.IsSuccess)
             {
-                // Task #6: Successful scan path populates auto-extracted parameters and passes through receipt step
-                _workflowService.SelectedHostName = isArabic ? "قيد التدقيق" : "Pending Queue";
+                string scannedName = scanResult.FullNameEnglish;
+                _workflowService.SelectedHostName = string.IsNullOrWhiteSpace(scannedName)
+                    ? (isArabic ? "مضيف الكشك" : "Kiosk Host")
+                    : scannedName;
+
                 _workflowService.SelectedPurpose = _workflowService.CurrentFlow == "WalkIn"
                     ? (isArabic ? "زيارة بدون موعد" : "Walk-In Guest")
                     : (isArabic ? "زيارة مسجلة" : "Pre-Registered Visit");
-                _workflowService.SelectedMobile = isArabic ? "مسجل آلياً" : "Auto-Extracted";
+
+                _workflowService.SelectedMobile = isArabic ? "غير مسجل" : "Not Provided";
 
                 PrepareReceiptAndPrivacyStep();
             }
             else
             {
-                // Fallback path: scanner offline/failed; redirect user to manual data entry view
                 ViewScan.Visibility = Visibility.Collapsed;
                 TxtHostName.Text = string.Empty;
                 TxtMobileNumber.Text = string.Empty;
@@ -95,12 +101,23 @@ namespace AIN_Kiosk
                 }
             }
 
-            if (TxtEmail != null && !string.IsNullOrWhiteSpace(TxtEmail.Text))
+            string emailInput = TxtEmail != null ? TxtEmail.Text.Trim() : string.Empty;
+            FieldRequirement emailPolicy = _configProvider.EmailRequirement;
+
+            if (emailPolicy == FieldRequirement.Required && string.IsNullOrWhiteSpace(emailInput))
             {
-                string emailInput = TxtEmail.Text.Trim();
+                string requiredEmailMsg = isArabic
+                    ? "البريد الإلكتروني إلزامي للحصول على الإيصال الرقمي!"
+                    : "Email address is required to receive digital privacy receipt!";
+                MessageBox.Show(requiredEmailMsg, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(emailInput))
+            {
                 try
                 {
-                    var addr = new System.Net.Mail.MailAddress(emailInput);
+                    var addr = new MailAddress(emailInput);
                     if (addr.Address != emailInput) throw new FormatException();
                 }
                 catch
@@ -116,14 +133,8 @@ namespace AIN_Kiosk
                 ? (isArabic ? "غير مسجل" : "Not Provided")
                 : TxtMobileNumber.Text.Trim();
 
-            // Task #6: Unified transition step for manual data entry path
             PrepareReceiptAndPrivacyStep();
         }
-
-        /// <summary>
-        /// Unified pipeline step creating distinct badge/receipt references and loading privacy view.
-        /// Fixes Task #4, Task #5, and Task #6 compliance requirements.
-        /// </summary>
 
         internal void ResetSessionTokens()
         {
@@ -133,11 +144,9 @@ namespace AIN_Kiosk
 
         private void PrepareReceiptAndPrivacyStep()
         {
-            // Task #5: Invoke IReceiptReferenceProvider (GetSyntheticToken) rather than generating raw GUIDs directly in UI
             _receiptToken = _receiptReferenceProvider.GetSyntheticToken();
             string localReceiptQrPayload = $"https://receipt.ain.ebtco.com/r/{_receiptToken}";
 
-            // Task #4: Generate distinct dedicated badge credential token (never printed as privacy receipt token)
             _badgeToken = $"BDG-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
             try
@@ -178,7 +187,6 @@ namespace AIN_Kiosk
             PrintStatusLabel.Foreground = Brushes.DarkBlue;
             PrintStatusLabel.Text = isArabic ? "[محاكاة] جاري معالجة طباعة البطاقة..." : "[Simulation] Processing badge print...";
 
-            // Task #4: Pass dedicated _badgeToken to print service (separate from receipt token)
             bool isPrintSuccess = await _printService.PrintVisitorBadgeAsync(
                 _workflowService.SelectedHostName,
                 _workflowService.SelectedPurpose,
