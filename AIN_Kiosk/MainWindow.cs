@@ -9,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using AIN_Kiosk.Services;
 using AIN_Kiosk.Adapters;
+using AIN_Kiosk.Helpers;
 
 namespace AIN_Kiosk
 {
@@ -43,6 +44,11 @@ namespace AIN_Kiosk
             _registrationQueue = new MockRegistrationQueue();
             _receiptReferenceProvider = new MockReceiptReferenceProvider();
 
+            // Item 11: Register pasting handlers to block illegal characters via clipboard paste
+            if (TxtRetroVisitorName != null) DataObject.AddPastingHandler(TxtRetroVisitorName, OnNamePaste);
+            if (TxtHostName != null) DataObject.AddPastingHandler(TxtHostName, OnNamePaste);
+            if (TxtRetroHostName != null) DataObject.AddPastingHandler(TxtRetroHostName, OnNamePaste);
+
             _workflowService.OnIdleTimeout += () =>
             {
                 ResetToHomeView(forceResetToArabic: true);
@@ -74,6 +80,25 @@ namespace AIN_Kiosk
         private void Input_Alphanumeric_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !Regex.IsMatch(e.Text, @"^[a-zA-Z0-9]+$");
+        }
+
+        // Item 11: Validates pasted text and cancels paste command if invalid name format is detected
+        private void OnNamePaste(object sender, DataObjectPastingEventArgs e)
+        {
+            if (e.DataObject.GetDataPresent(DataFormats.Text))
+            {
+                string pasteText = Convert.ToString(e.DataObject.GetData(DataFormats.Text)) ?? string.Empty;
+                if (!DocumentValidationHelper.IsValidName(pasteText))
+                {
+                    e.CancelCommand();
+                    e.Handled = true;
+                }
+            }
+            else
+            {
+                e.CancelCommand();
+                e.Handled = true;
+            }
         }
 
         #endregion
