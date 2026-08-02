@@ -1,41 +1,36 @@
-# 🏛️ Architectural Decisions Document (ADR)
-> **Project Scope:** AIN Kiosk System Clean-Up & Refactoring  
-> **Status:** Approved / Architecture Secured  
+# Architectural Decisions Document (ADR)
+Project Scope: AIN Kiosk System Targeted Closure and Refactoring
+Status: Partially Separated / Targeted Closure Review
 
----
+# 1. Context and Problem Statement
+The legacy implementation of MainWindow.xaml.cs operated as a Massive View Controller. The targeted closure refactoring improves separation of concerns while maintaining prototype compatibility prior to enterprise backend integration.
 
-## 1. Context & Problem Statement
-The legacy implementation of `MainWindow.xaml.cs` suffered from severe structural coupling, operating as a classic 
-**Massive View Controller (God Object)**. This created several critical engineering failures:
+# 2. Architecture Status and Components
 
-* 🛑 **UI & Business Blending:** UI layout rules were heavily intertwined with local state persistence logic.
-* 🛑 **Hardware Tight Coupling:** Raw hardware printer ZPL commands and third-party device SDK calls were invoked directly 
-* inside button events.
-* 🛑 **Test Blockage:** Isolation boundaries were entirely breached, preventing any form of independent automated testing.
+## A. Separation of MainWindow Code Behind
+Status: Partially Separated
+Details: UI event orchestration remains in MainWindow partial files, while workflow state management, receipt generation, and localization are delegated to independent service layers.
 
----
+## B. Event Driven Workflow Subsystem
+Status: Completed
+Details: KioskWorkflowService manages visitor state transitions across Walk In, Pre Registered, and Retroactive paths, handling idle timeouts and session resets.
 
-## 2. Architecture Decisions Implemented
+## C. Hardware Peripheral Adapters
+Status: Mock Implementation
+Details: PrinterAdapter and ScannerAdapter wrap local mock providers (MockDocumentScanner and RawPrinterHelper). Direct hardware SDK calls are isolated behind adapter interfaces.
 
-To pass the Kiosk Engineering Cleanup Gate and comply with corporate software design regulations, 
-the following decoupling steps were executed:
+## D. Local Mock Configuration Providers
+Status: Local Mock Implementation
+Details: LocalMockKioskConfigurationProvider and LocalMockKioskPrivacyNoticeProvider supply local developmental values for tenant branding, privacy contacts, and data retention statements. Dynamic configuration loading is pending backend integration.
 
-### 📑 A. Deconstruction of MainWindow.xaml.cs
-All domain-specific and device-level tasks were permanently evacuated from the view code-behind layer. 
-* **Target Destination:** Transferred into independent, loosely coupled services under the isolated `AIN_Kiosk.Services` namespace.
+## E. Localization Service
+Status: Completed
+Details: LocalizationService resolves UI strings dynamically between Arabic and English, enforcing neutral action wording and excluding obsolete consent text.
 
-### 🔄 B. Event-Driven Workflow Subsystem
-Eradicated inline conditional flow switching by engineering a dedicated state controller.
-* **Component Built:** `KioskWorkflowService`
-* **Responsibility:** Handles core visitor state transitions (*Walk-In, Pre-Registered, and Retroactive paths*)
-* and triggers asynchronous idle session timeouts without maintaining any direct references to UI controls.
+## F. Data Privacy and Memory Handling
+Status: Development Hardening
+Details: Raw PII logging is strictly excluded from debug streams using synthetic correlation references. Due to .NET string immutability, immediate string erasure from RAM cannot be guaranteed by garbage collection; mutable byte buffers are zeroed where feasible.
 
-### 🔌 C. Boundary Isolation via Adapter Pattern
-Introduced a strict abstraction layer between the application layer and physical peripheral components.
-* **Component Built:** An independent `Adapters` namespace containing explicit wrappers (`PrinterAdapter` and `ScannerAdapter`).
-* **Impact:** The UI view layer now maintains **0% direct dependency** on hardware vendor SDKs or native raw printer communication streams.
-
-### 🌐 D. Dictionary-Based Localization Service
-Eradicated all inline hardcoded multi-lingual toggle statements.
-* **Mechanism:** Encapsulated the language translation pipeline into a unified `LocalizationService` 
-* that dynamically resolves interface keys, establishing a clean multi-lingual provider architecture.
+## G. Audit Log Representation
+Status: Pending Backend Audit Integration
+Details: Local session references serve as developmental placeholders. Runtime evidence logging is pending integration with the approved enterprise audit service.

@@ -6,18 +6,14 @@ namespace AIN_Kiosk
     {
         public Guid SessionId { get; private set; }
 
-        // =========================================================================
-        // 1. LEVEL 1: Most Sensitive (Classified — Restricted under NDMO)
-        // =========================================================================
+        // Level 1: Restricted / Sensitive Identity Information
         public string VisitorFullName { get; private set; } = string.Empty;
         public string RawDocumentNumber { get; private set; } = string.Empty;
         public string Nationality { get; private set; } = string.Empty;
         public DateTime? DateOfBirth { get; private set; }
         public byte[]? RawDocumentImagePayload { get; private set; }
 
-        // =========================================================================
-        // 2. LEVEL 2: Personal but Lower-Risk (PII for Operational Use)
-        // =========================================================================
+        // Level 2: Operational PII
         public DateTime ArrivalTimestamp { get; private set; }
         public string PurposeOfVisit { get; private set; } = "General";
         public string HostName { get; private set; } = string.Empty;
@@ -25,17 +21,12 @@ namespace AIN_Kiosk
         public string CompanyName { get; private set; } = string.Empty;
         public string ConsentVersionString { get; private set; } = "v1.1-SDAIA";
 
-        // =========================================================================
-        // 3. LEVEL 3: Operational Metadata (آمن للـ Logging والأرشفة)
-        // =========================================================================
+        // Level 3: Operational Metadata
         public string CaptureMethod { get; private set; } = "Scanned";
         public string KioskIdentifier { get; private set; } = "RIYADH_KIOSK_01";
         public string TenantIdentifier { get; private set; } = "BDO_AlAmri_HQ";
-
-        // 🚀 إضافة المتغير التشغيلي لحل خطأ لقطة الشاشة CS1729
         public string OperatorUserId { get; private set; } = string.Empty;
 
-        // 🚀 تحديث المنشئ (Constructor) ليستقبل البارامترين المتطابقين مع مدير الجلسات
         public VisitorSession(Guid sessionId, string operatorUserId)
         {
             SessionId = sessionId;
@@ -43,9 +34,7 @@ namespace AIN_Kiosk
             ArrivalTimestamp = DateTime.Now;
         }
 
-        // =========================================================================
-        // ⚙️ ميكانيكية معالجة البيانات وتقليلها (Data-Minimization Principle)
-        // =========================================================================
+        // Populates identity details enforcing doc number truncation for foreign credentials
         public void SetIdentityData(string fullName, string docNumber, string nationality, DateTime dob, byte[] imagePayload, bool isForeignPassport)
         {
             VisitorFullName = fullName;
@@ -68,9 +57,8 @@ namespace AIN_Kiosk
             RawDocumentNumber = "****" + fullPassportNumber.Substring(fullPassportNumber.Length - 4);
         }
 
-        // =========================================================================
-        // 🧼 نظام التطهير الفوري للذاكرة (Memory Wipe - DoD Gate)
-        // =========================================================================
+        // Item 16: Clears session variables and zeroes mutable byte buffers.
+        // String memory management relies on standard .NET runtime garbage collection behavior.
         public void WipeSensitiveDataInMemory()
         {
             VisitorFullName = string.Empty;
@@ -84,24 +72,17 @@ namespace AIN_Kiosk
                 Array.Clear(RawDocumentImagePayload, 0, RawDocumentImagePayload.Length);
                 RawDocumentImagePayload = null;
             }
-
-            GC.Collect();
         }
 
-        // =========================================================================
-        // 🛡️ دالة توليد الـ Logs الآمنة المتوافقة مع الفحص الرقابي لقاعدة الامتثال
-        // =========================================================================
+        // Item 17: Formats operational audit log using only active runtime metadata, removing static flag claims
         public string ToSafeAuditLog()
         {
             return $"[AUDIT] Timestamp: {ArrivalTimestamp:yyyy-MM-dd HH:mm:ss} | " +
                    $"Session: {SessionId} | " +
-                   $"Operator: {OperatorUserId} | " + // ربط معرّف الموظف الفعلي بالعملية
+                   $"Operator: {OperatorUserId} | " +
                    $"Method: {CaptureMethod} | " +
                    $"Kiosk: {KioskIdentifier} | " +
-                   $"Tenant: {TenantIdentifier} | " +
-                   $"Status: ActionProcessed | " +
-                   $"BiometricsCaptured: FALSE | " +
-                   $"CameraActive: FALSE";
+                   $"Tenant: {TenantIdentifier}";
         }
     }
 }

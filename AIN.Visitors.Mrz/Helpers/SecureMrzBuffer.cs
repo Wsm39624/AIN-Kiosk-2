@@ -11,7 +11,6 @@ namespace AIN.Visitors.Mrz.Helpers
 
         public SecureMrzBuffer(int length)
         {
-            // استئجار مصفوفة من المجمع، سيتم إرجاعها ومسحها عند التخلص من الكائن
             _buffer = ArrayPool<char>.Shared.Rent(length);
         }
 
@@ -21,11 +20,9 @@ namespace AIN.Visitors.Mrz.Helpers
         {
             if (_buffer is null) return;
             
-            // مسح الذاكرة الفعلية المستهلكة (RAM Wipe)
             CryptographicOperations.ZeroMemory(
                 MemoryMarshal.AsBytes(_buffer.AsSpan()));
                 
-            // إعادة المصفوفة إلى المجمع مع تفعيل المسح
             ArrayPool<char>.Shared.Return(_buffer, clearArray: true);
             _buffer = null;
         }

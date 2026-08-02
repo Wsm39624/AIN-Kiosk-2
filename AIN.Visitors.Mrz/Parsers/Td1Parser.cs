@@ -1,138 +1,126 @@
 using System;
-using System.Security.Cryptography;
-using System.Runtime.InteropServices;
-using AIN.Visitors.Mrz.Models;
+using System.Text;
 using AIN.Visitors.Mrz.Helpers;
+using AIN.Visitors.Mrz.Models;
+
 namespace AIN.Visitors.Mrz.Parsers
 {
-    public class Td1Parser
+    public static class Td1Parser
     {
-        public MrzFields Parse(ReadOnlySpan<char> line1, ReadOnlySpan<char> line2, ReadOnlySpan<char> line3)
+        public static ParsedMrzResult Parse(ReadOnlySpan<char> line1, ReadOnlySpan<char> line2, ReadOnlySpan<char> line3)
         {
-            var result = new MrzFields { IsValid = false, ErrorCode = MrzErrorCode.None };
+            var result = new ParsedMrzResult
+            {
+                DocumentFormat = "TD1",
+                ValidationStatus = "Valid"
+            };
 
             if (line1.Length != 30 || line2.Length != 30 || line3.Length != 30)
             {
-                result.ErrorCode = MrzErrorCode.InvalidLength;
+                result.ValidationStatus = "Invalid";
+                result.ErrorCodes.Add(nameof(MrzErrorCode.InvalidLength));
                 return result;
             }
 
-            if (line1[0] != 'I' && line1[0] != 'A' && line1[0] != 'C')
+            try
             {
-                result.ErrorCode = MrzErrorCode.InvalidFormat;
-                return result;
+                // --- استخراج الحقول من السطر الأول (Line 1) ---
+                string docType = line1.Slice(0, 2).ToString().Replace("<", "").Trim();
+                string issuingState = line1.Slice(2, 3).ToString();
+                string docNumberRaw = line1.Slice(5, 9).ToString();
+                
+                result.DocumentType = docType;
+
+                // --- استخراج الحقول من السطر الثاني (Line 2) وفحص أرقام التحقق ---
+                var docNumberSpan = line1.Slice(5, 9);
+                char docNumberCheckExpected = line2[0];
+                bool isDocNumValid = CheckDigitHelper.Verify(docNumberSpan, docNumberCheckExpected);
+                result.CheckDigitResults["DocumentNumber"] = isDocNumValid;
+                if (!isDocNumValid)
+                {
+                    result.ValidationStatus = "Invalid";
+                    result.ErrorCodes.Add(nameof(MrzErrorCode.DocumentNumberCheckDigitFailure));
+                }
+
+                string optional1Raw = line2.Slice(1, 15).ToString();
+
+                var dobSpan = line2.Slice(16, 6);
+                char dobCheckExpected = line2[22];
+                bool isDobValid = CheckDigitHelper.Verify(dobSpan, dobCheckExpected);
+                result.CheckDigitResults["DateOfBirth"] = isDobValid;
+                if (!isDobValid)
+                {
+                    result.ValidationStatus = "Invalid";
+                    result.ErrorCodes.Add(nameof(MrzErrorCode.BirthDateCheckDigitFailure));
+                }
+
+                string sexRaw = line2.Slice(23, 1).ToString();
+
+                var expirySpan = line2.Slice(24, 6);
+                char expiryCheckExpected = line3[0];
+                bool isExpiryValid = CheckDigitHelper.Verify(expirySpan, expiryCheckExpected);
+                result.CheckDigitResults["DateOfExpiry"] = isExpiryValid;
+                if (!isExpiryValid)
+                {
+                    result.ValidationStatus = "Invalid";
+                    result.ErrorCodes.Add(nameof(MrzErrorCode.ExpiryDateCheckDigitFailure));
+                }
+
+                // --- استخراج الحقول من السطر الثالث (Line 3) ---
+                string nationality = line3.Slice(1, 3).ToString();
+                string optional2Raw = line3.Slice(4, 11).ToString();
+                
+                string combinedOptional = $"{optional1Raw}{optional2Raw}".Replace("<", "").Trim();
+                string namesRaw = line3.Slice(15, 15).ToString();
+
+                // --- فحص رقم التحقق المركب Composite Check Digit ---
+                char compositeExpected = line3[14];
+                var compositeBuilder = new StringBuilder(30);
+                compositeBuilder.Append(line1.Slice(5, 9));
+                compositeBuilder.Append(line2.Slice(0, 1));
+                compositeBuilder.Append(line2.Slice(1, 15));
+                compositeBuilder.Append(line2.Slice(16, 7));
+                compositeBuilder.Append(line2.Slice(24, 6));
+                compositeBuilder.Append(line3.Slice(0, 1));
+                compositeBuilder.Append(line3.Slice(4, 10));
+
+                bool isCompositeValid = CheckDigitHelper.Verify(compositeBuilder.ToString().AsSpan(), compositeExpected);
+                result.CompositeCheckDigitResult = isCompositeValid;
+                if (!isCompositeValid)
+                {
+                    result.ValidationStatus = "Invalid";
+                    result.ErrorCodes.Add(nameof(MrzErrorCode.CompositeCheckDigitFailure));
+                }
+
+                // 2. تطبيق التحقق الدلالي (Semantic Validation)
+                result.DocumentNumber = docNumberSpan.ToString().Replace("<", "").Trim();
+                
+                MrzSemanticValidator.ValidateSemantics(
+                    result,
+                    namesRaw,
+                    dobSpan.ToString(),
+                    expirySpan.ToString(),
+                    sexRaw,
+                    nationality,
+                    issuingState,
+                    string.IsNullOrEmpty(combinedOptional) ? null : combinedOptional
+                );
             }
-
-            if (ContainsLowercase(line1) || ContainsLowercase(line2) || ContainsLowercase(line3))
+            catch (ArgumentException)
             {
-                result.ErrorCode = MrzErrorCode.InvalidCharacter;
-                return result;
+                result.ValidationStatus = "Invalid";
+                if (!result.ErrorCodes.Contains(nameof(MrzErrorCode.IllegalCharacter)))
+                {
+                    result.ErrorCodes.Add(nameof(MrzErrorCode.IllegalCharacter));
+                }
             }
-
-            ReadOnlySpan<char> docNumberSpan = line1.Slice(5, 9);
-            char docNumCheckDigitChar = line1[14];
-            
-            ReadOnlySpan<char> dobSpan = line2.Slice(0, 6);
-            char dobCheckDigitChar = line2[6];
-            
-            ReadOnlySpan<char> expirySpan = line2.Slice(8, 6);
-            char expiryCheckDigitChar = line2[14];
-            
-            ReadOnlySpan<char> compPart1 = line1.Slice(5, 25); // DocNum + Check + Optional1
-            ReadOnlySpan<char> compPart2 = line2.Slice(0, 7);  // DOB + Check
-            ReadOnlySpan<char> compPart3 = line2.Slice(8, 7);  // Expiry + Check
-            ReadOnlySpan<char> compPart4 = line2.Slice(18, 11); // Optional2
-            char compositeCheckDigitChar = line2[29];
-
-            int expectedDocNumCd = CheckDigitHelper.Calculate(docNumberSpan);
-            int expectedDobCd = CheckDigitHelper.Calculate(dobSpan);
-            int expectedExpiryCd = CheckDigitHelper.Calculate(expirySpan);
-
-            Span<char> compositeSpan = stackalloc char[50];
-            compPart1.CopyTo(compositeSpan.Slice(0, 25));
-            compPart2.CopyTo(compositeSpan.Slice(25, 7));
-            compPart3.CopyTo(compositeSpan.Slice(32, 7));
-            compPart4.CopyTo(compositeSpan.Slice(39, 11));
-            
-            int expectedCompositeCd = CheckDigitHelper.Calculate(compositeSpan);
-
-            CryptographicOperations.ZeroMemory(MemoryMarshal.AsBytes(compositeSpan));
-
-            bool isValid = ((char)(expectedDocNumCd + '0') == docNumCheckDigitChar) &&
-                           ((char)(expectedDobCd + '0') == dobCheckDigitChar) &&
-                           ((char)(expectedExpiryCd + '0') == expiryCheckDigitChar) &&
-                           ((char)(expectedCompositeCd + '0') == compositeCheckDigitChar);
-
-            if (!isValid)
+            catch (Exception)
             {
-                result.ErrorCode = MrzErrorCode.CheckDigitError;
-                return result;
-            }
-
-            result.IsValid = true;
-            
-            result.DocumentType = CleanString(line1.Slice(0, 2));
-            result.IssuingState = CleanString(line1.Slice(2, 3));
-            result.DocumentNumber = CleanString(docNumberSpan);
-            
-            result.PersonalNumber = CleanString(line1.Slice(15, 15)); 
-
-            result.DateOfBirth = CleanString(dobSpan);
-            char sexChar = line2[7];
-            result.Sex = sexChar == '<' ? "U" : sexChar.ToString();
-            result.DateOfExpiry = CleanString(expirySpan);
-            result.Nationality = CleanString(line2.Slice(15, 3));
-            
-            ReadOnlySpan<char> nameRaw = line3.Slice(0, 30);
-            int separatorIndex = nameRaw.IndexOf("<<".AsSpan());
-            if (separatorIndex != -1)
-            {
-                result.PrimaryIdentifier = CleanString(nameRaw.Slice(0, separatorIndex), replaceWithSpace: true);
-                result.SecondaryIdentifier = CleanString(nameRaw.Slice(separatorIndex + 2), replaceWithSpace: true);
-            }
-            else
-            {
-                result.PrimaryIdentifier = CleanString(nameRaw, replaceWithSpace: true);
+                result.ValidationStatus = "Invalid";
+                result.ErrorCodes.Add(nameof(MrzErrorCode.InternalParserFailure));
             }
 
             return result;
-        }
-
-        private bool ContainsLowercase(ReadOnlySpan<char> span)
-        {
-            foreach (char c in span)
-            {
-                if (c >= 'a' && c <= 'z') return true;
-            }
-            return false;
-        }
-
-        private string CleanString(ReadOnlySpan<char> span, bool replaceWithSpace = false)
-        {
-            int end = span.Length - 1;
-            while (end >= 0 && span[end] == '<') end--;
-            if (end < 0) return string.Empty;
-            
-            ReadOnlySpan<char> trimmed = span.Slice(0, end + 1);
-            Span<char> buffer = stackalloc char[trimmed.Length];
-            int actualLength = 0;
-            
-            if (!replaceWithSpace)
-            {
-                foreach (char c in trimmed)
-                {
-                    if (c != '<') buffer[actualLength++] = c;
-                }
-            }
-            else
-            {
-                foreach (char c in trimmed)
-                {
-                    buffer[actualLength++] = (c == '<') ? ' ' : c;
-                }
-            }
-            
-            return buffer.Slice(0, actualLength).ToString();
         }
     }
 }
